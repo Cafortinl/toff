@@ -1,0 +1,27 @@
+# Compiler Related Variables
+CXX        := clang++
+CXX_FLAGS  := -Wall -Wextra -pedantic
+
+# Project Specific Variables
+BIN		   := bin
+SRC		   := src
+INCLUDE	   := include
+LIB		   := lib
+LIBRARIES  := -lsqlite3
+EXECUTABLE := planner
+
+
+all: $(BIN)/$(EXECUTABLE)
+
+run: clean all
+	clear
+	@echo "Executing...\n"
+	./$(BIN)/$(EXECUTABLE)
+
+$(BIN)/$(EXECUTABLE): $(SRC)/*.cpp
+	@echo "Building...\n"
+	$(CXX) $(CXX_FLAGS) -I$(INCLUDE) -L$(LIB) $^ -o $@ $(LIBRARIES)
+
+clean:
+	@echo "Clearing...\n"
+	-rm $(BIN)/*
