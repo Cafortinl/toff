@@ -1,5 +1,5 @@
 # Compiler Related Variables
-CXX        := clang++
+CXX        := clang
 CXX_FLAGS  := -Wall -Wextra -pedantic
 
 # Project Specific Variables
@@ -18,7 +18,7 @@ run: clean all
 	@echo "Executing...\n"
 	./$(BIN)/$(EXECUTABLE)
 
-$(BIN)/$(EXECUTABLE): $(SRC)/*.cpp
+$(BIN)/$(EXECUTABLE): $(SRC)/*.c
 	@echo "Building...\n"
 	$(CXX) $(CXX_FLAGS) -I$(INCLUDE) -L$(LIB) $^ -o $@ $(LIBRARIES)
 

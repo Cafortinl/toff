@@ -1,13 +1,30 @@
 [
   {
-    "file": "src/main.cpp",
+    "file": "src/main.c",
     "arguments": [
-      "clang++",
+      "/usr/bin/clang",
       "-Wall",
       "-Wextra",
       "-pedantic",
       "-Iinclude",
-      "src/main.cpp",
+      "src/main.c",
+      "-o",
+      "bin/planner",
+      "-I",
+      "/opt/homebrew/include"
+    ],
+    "directory": "/Volumes/CAFL_DRIVE/Dev/Vacanner/Planner",
+    "output": "bin/planner"
+  },
+  {
+    "file": "src/sqlite_database_administrator.c",
+    "arguments": [
+      "/usr/bin/clang",
+      "-Wall",
+      "-Wextra",
+      "-pedantic",
+      "-Iinclude",
+      "src/sqlite_database_administrator.c",
       "-o",
       "bin/planner",
       "-I",
