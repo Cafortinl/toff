@@ -249,7 +249,7 @@ query_result* sqlite_dba_execute_statement(sqlite_database_administrator* dba) {
 
             //SQLite Fundamental Datatypes = enum SQLITE_DATA_TYPES + 1
             //https://sqlite.org/c3ref/c_blob.html
-            results->columns[index].colum_type = (enum SQLITE_DATA_TYPES) (sqlite3_column_type(dba->statement, i) + 1);
+            results->columns[index].column_type = (enum SQLITE_DATA_TYPES) (sqlite3_column_type(dba->statement, i) + 1);
 
             results->columns[index].column_name = (char*) calloc(strlen(column_name) + 1, sizeof(char));
             memcpy(results->columns[index].column_name, column_name, strlen(column_name) + 1);
@@ -606,6 +606,138 @@ bool sqlite_dba_check_if_table_exists(sqlite_database_administrator *dba, const 
 
     if (!results_length)
         return false;
+
+    return true;
+}
+
+bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_definition *table) {
+    if (!dba) {
+        fprintf(stderr, "sqlite_dba_create_table - Error: no valid sqlite_database_administrator struct was provided.\n");
+        return false;
+    }
+
+    if (!dba->database) {
+        fprintf(stderr, "sqlite_dba_create_table - Error: no valid database connection.\n");
+        return false;
+    }
+
+    if (!table) {
+        fprintf(stderr, "sqlite_dba_create_table - Error: no valid table_definition struct was given.\n");
+        return false;
+    }
+
+    if (sqlite_dba_check_if_table_exists(dba, table->table_name)) {
+        fprintf(stderr, "sqlite_dba_create_table - Error: table already exists.\n");
+        return false;
+    }
+
+    sqlite3_str *query_builder = sqlite3_str_new(dba->database);
+    sqlite3_str *constraint_builder;
+    char* constraints = NULL;
+
+    sqlite3_str_appendf(
+        query_builder,
+        "CREATE TABLE %s (",
+        table->table_name
+    );
+
+    for (size_t i = 0; i < table->column_count; ++i) {
+        table_field_node current_column = table->columns[i];
+
+        if (constraints) {
+            sqlite3_free(constraints);
+            constraints = NULL;
+        }
+
+        if (current_column.constraints) {
+            column_constraints current_constraints = *(current_column.constraints);
+            constraint_builder = sqlite3_str_new(dba->database);
+
+            if (CC_IS_PRIMARY_KEY(current_constraints.constraint_information)) {
+                sqlite3_str_appendf(
+                    constraint_builder,
+                    " PRIMARY KEY %s",
+                    current_constraints.value
+                );
+            } else if (CC_IS_FOREIGN_KEY(current_constraints.constraint_information)) {
+                char *constraint_values = malloc(sizeof(char) * (strlen(current_constraints.value) + 1));
+                char *referenced_table, *referenced_column;
+
+                strcpy(constraint_values, current_constraints.value);
+
+                referenced_table = strtok(constraint_values, "|");
+                referenced_column = strtok(NULL, "|");
+
+                sqlite3_str_appendf(
+                    constraint_builder,
+                    ", FOREIGN KEY (%s) REFERENCES %s(%s)",
+                    current_column.column_name,
+                    referenced_table,
+                    referenced_column
+                );
+                free(constraint_values);
+
+                if (CC_IS_ON_DELETE(current_constraints.constraint_information)) {
+                    sqlite3_str_appendf(
+                        constraint_builder,
+                        " ON DELETE %s",
+                        CC_IS_CASCADE(current_constraints.constraint_information) ? "CASCADE" : "NO ACTION"
+                    );
+                }
+            } else if (CC_IS_UNIQUE(current_constraints.constraint_information)) {
+                sqlite3_str_appendf(
+                    constraint_builder,
+                    " UNIQUE"
+                );
+            } else if (CC_IS_DEFAULT(current_constraints.constraint_information)) {
+                sqlite3_str_appendf(
+                    constraint_builder,
+                    " DEFAULT %s",
+                    current_constraints.value
+                );
+            } else if (CC_IS_COLLATION(current_constraints.constraint_information)) {
+                sqlite3_str_appendf(
+                    constraint_builder,
+                    " COLLATE %s",
+                    current_constraints.value
+                );
+            }
+
+            constraints = sqlite3_str_finish(constraint_builder);
+        }
+
+        sqlite3_str_appendf(
+            query_builder,
+            "%s %s%s%s",
+            current_column.column_name,
+            data_type_to_string(current_column.column_type),
+            constraints ? constraints : "",
+            i < (table->column_count - 1) ? ", " : ""
+        );
+    }
+
+    sqlite3_str_appendf(
+        query_builder,
+        ")"
+    );
+
+    char* query = sqlite3_str_finish(query_builder);
+
+    bool statement_prepared = sqlite_dba_prepare_statement(dba, query);
+    sqlite3_free(query);
+
+    if (!statement_prepared) {
+        fprintf(stderr, "sqlite_dba_create_table - Error: there was an error while trying to prepare the statement. Statement: %s\n", query);
+        return false;
+    }
+
+    query_result* statement_executed = sqlite_dba_execute_statement(dba);
+    if (!statement_executed) {
+        fprintf(stderr, "sqlite_dba_create_table - Error: the statement was not able to be executed.\n");
+        return false;
+    }
+
+    sqlite_dba_query_result_free(statement_executed);
 
     return true;
 }

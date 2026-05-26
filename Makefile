@@ -1,6 +1,6 @@
 # Compiler Related Variables
 CXX        := clang
-CXX_FLAGS  := -Wall -Wextra -pedantic
+CXX_FLAGS  := -Wall -Wextra -pedantic -g
 
 # Project Specific Variables
 BIN		   := bin

@@ -4,6 +4,10 @@
  *
  * Manage connections and queries to SQLite databases.
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef SQLITE_DATABASE_ADMINISTRATOR_H
 #define SQLITE_DATABASE_ADMINISTRATOR_H
 
@@ -57,6 +61,26 @@ typedef struct filter_node {
 
 // EndSection: Query Filters
 
+// Section: Table Information
+
+//Column Constraint Constants
+#define CC_PRIMARY_KEY 0x1
+#define CC_FOREIGN_KEY 0x2
+#define CC_UNIQUE 0x4
+#define CC_DEFAULT 0x8
+#define CC_COLLATION 0x10
+#define CC_ON_DELETE 0x20
+#define CC_CASCADE 0x40
+
+//Column Constraint Functions
+#define CC_IS_PRIMARY_KEY(x) x & CC_PRIMARY_KEY
+#define CC_IS_FOREIGN_KEY(x) x & CC_FOREIGN_KEY
+#define CC_IS_UNIQUE(x) x & CC_UNIQUE
+#define CC_IS_DEFAULT(x) x & CC_DEFAULT
+#define CC_IS_COLLATION(x) x & CC_COLLATION
+#define CC_IS_ON_DELETE(x) x & CC_ON_DELETE
+#define CC_IS_CASCADE(x) x & CC_CASCADE
+
 enum SQLITE_DATA_TYPES {
     SQLITE_DBA_INTEGER,
     SQLITE_DBA_FLOAT,
@@ -67,9 +91,24 @@ enum SQLITE_DATA_TYPES {
 };
 
 typedef struct {
+    /*
+     * bit 1: is_primary_key    - Mask: 0x1
+     * bit 2: is_foreign_key    - Mask: 0x2
+     * bit 3: is_unique         - Mask: 0x4
+     * bit 4: has_default_value - Mask: 0x8
+     * bit 5: has_collation     - Mask: 0x10
+     * bit 6: has_ond_delete    - Mask: 0x20
+     * bit 7: cascade           - Mask: 0x40
+     */
+    uint8_t constraint_information;
+    char* value;
+} column_constraints;
+
+typedef struct {
     char* column_name;
     char* value;
-    enum SQLITE_DATA_TYPES colum_type; 
+    enum SQLITE_DATA_TYPES column_type; 
+    column_constraints* constraints;
 } table_field_node;
 
 typedef struct {
@@ -78,6 +117,9 @@ typedef struct {
     size_t column_count;
 } table_definition;
 
+// EndSection: Table Information
+
+// Section: DBA
 typedef struct {
     table_field_node* columns;
     size_t column_count;
@@ -219,4 +261,11 @@ query_result* sqlite_dba_delete_item(sqlite_database_administrator* dba, const c
 bool sqlite_dba_check_if_table_exists(sqlite_database_administrator *dba, const char* table_name);
 
 void sqlite_dba_query_result_free(query_result *results);
+
+bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_definition *table);
+// EndSection: DBA
+#endif
+
+#ifdef __cplusplus
+}
 #endif
