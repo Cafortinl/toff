@@ -632,8 +632,10 @@ bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_def
     }
 
     sqlite3_str *query_builder = sqlite3_str_new(dba->database);
-    sqlite3_str *constraint_builder;
-    char* constraints = NULL;
+    sqlite3_str *inline_constraint_builder;
+    sqlite3_str *append_constraint_builder = NULL;
+    char* inline_constraints = NULL;
+    char* append_constraints = NULL;
 
     sqlite3_str_appendf(
         query_builder,
@@ -644,22 +646,25 @@ bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_def
     for (size_t i = 0; i < table->column_count; ++i) {
         table_field_node current_column = table->columns[i];
 
-        if (constraints) {
-            sqlite3_free(constraints);
-            constraints = NULL;
+        if (inline_constraints) {
+            sqlite3_free(inline_constraints);
+            inline_constraints = NULL;
         }
 
         if (current_column.constraints) {
             column_constraints current_constraints = *(current_column.constraints);
-            constraint_builder = sqlite3_str_new(dba->database);
+            inline_constraint_builder = sqlite3_str_new(dba->database);
 
             if (CC_IS_PRIMARY_KEY(current_constraints.constraint_information)) {
                 sqlite3_str_appendf(
-                    constraint_builder,
+                    inline_constraint_builder,
                     " PRIMARY KEY %s",
                     current_constraints.value
                 );
             } else if (CC_IS_FOREIGN_KEY(current_constraints.constraint_information)) {
+                if (!append_constraint_builder)
+                    append_constraint_builder = sqlite3_str_new(dba->database);
+
                 char *constraint_values = malloc(sizeof(char) * (strlen(current_constraints.value) + 1));
                 char *referenced_table, *referenced_column;
 
@@ -669,7 +674,7 @@ bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_def
                 referenced_column = strtok(NULL, "|");
 
                 sqlite3_str_appendf(
-                    constraint_builder,
+                    append_constraint_builder,
                     ", FOREIGN KEY (%s) REFERENCES %s(%s)",
                     current_column.column_name,
                     referenced_table,
@@ -679,31 +684,31 @@ bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_def
 
                 if (CC_IS_ON_DELETE(current_constraints.constraint_information)) {
                     sqlite3_str_appendf(
-                        constraint_builder,
+                        append_constraint_builder,
                         " ON DELETE %s",
                         CC_IS_CASCADE(current_constraints.constraint_information) ? "CASCADE" : "NO ACTION"
                     );
                 }
             } else if (CC_IS_UNIQUE(current_constraints.constraint_information)) {
                 sqlite3_str_appendf(
-                    constraint_builder,
+                    inline_constraint_builder,
                     " UNIQUE"
                 );
             } else if (CC_IS_DEFAULT(current_constraints.constraint_information)) {
                 sqlite3_str_appendf(
-                    constraint_builder,
+                    inline_constraint_builder,
                     " DEFAULT %s",
                     current_constraints.value
                 );
             } else if (CC_IS_COLLATION(current_constraints.constraint_information)) {
                 sqlite3_str_appendf(
-                    constraint_builder,
+                    inline_constraint_builder,
                     " COLLATE %s",
                     current_constraints.value
                 );
             }
 
-            constraints = sqlite3_str_finish(constraint_builder);
+            inline_constraints = sqlite3_str_finish(inline_constraint_builder);
         }
 
         sqlite3_str_appendf(
@@ -711,15 +716,22 @@ bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_def
             "%s %s%s%s",
             current_column.column_name,
             data_type_to_string(current_column.column_type),
-            constraints ? constraints : "",
+            inline_constraints ? inline_constraints : "",
             i < (table->column_count - 1) ? ", " : ""
         );
     }
 
+    if (append_constraint_builder)
+        append_constraints = sqlite3_str_finish(append_constraint_builder);
+
     sqlite3_str_appendf(
         query_builder,
-        ")"
+        "%s);",
+        append_constraints ? append_constraints : ""
     );
+
+    if (append_constraints)
+        sqlite3_free(append_constraints);
 
     char* query = sqlite3_str_finish(query_builder);
 
