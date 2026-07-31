@@ -5,25 +5,70 @@
 
 #define EMPLOYEE_TABLE_COLUMN_COUNT 7
 
-column_constraints employee_id_constraint = {CC_PRIMARY_KEY, "ASC"};
-column_constraints position_fk_constraint = {CC_FOREIGN_KEY | CC_ON_DELETE, "Position|ID"};
-column_constraints department_fk_constraint = {CC_FOREIGN_KEY | CC_ON_DELETE, "Department|ID"};
-column_constraints branch_fk_constraint = {CC_FOREIGN_KEY | CC_ON_DELETE, "Branch|ID"};
-
 table_field_node employee_table_columns[EMPLOYEE_TABLE_COLUMN_COUNT] = {
-    {"ID", NULL, SQLITE_DBA_INTEGER, (column_constraints*) (&employee_id_constraint)},
-    {"Name", NULL, SQLITE_DBA_TEXT, NULL},
-    {"WorkingSince", NULL, SQLITE_DBA_TEXT, NULL},
-    {"PositionID", NULL, SQLITE_DBA_INTEGER, (column_constraints*) (&position_fk_constraint)},
-    {"DepartmentID", NULL, SQLITE_DBA_INTEGER, (column_constraints*) (&department_fk_constraint)},
-    {"BranchID", NULL, SQLITE_DBA_INTEGER, (column_constraints*) (&branch_fk_constraint)},
-    {"IsActive", NULL, SQLITE_DBA_INTEGER, NULL},
+    {
+        .column_name = "id",
+        .value = (column_information) {
+            .type = SQLITE_DBA_INTEGER},
+        .constraints = &(column_constraints) {
+            .constraint_information = CC_PRIMARY_KEY,
+            .value = "ASC"
+        }
+    },
+    {
+        .column_name = "name",
+        .value = (column_information) {
+            .type = SQLITE_DBA_TEXT
+        }
+    },
+    {
+        .column_name = "working_since",
+        .value = (column_information) {
+            .type = SQLITE_DBA_TEXT
+        }
+    },
+    {
+        .column_name = "position_id",
+        .value = (column_information) {
+            .type = SQLITE_DBA_INTEGER
+        },
+        .constraints = &(column_constraints) {
+            .constraint_information = CC_FOREIGN_KEY | CC_ON_DELETE,
+            .value = "position|id"
+        }
+    },
+    {
+        .column_name = "department_id",
+        .value = (column_information) {
+            .type = SQLITE_DBA_INTEGER
+        },
+        .constraints = &(column_constraints) {
+            .constraint_information = CC_FOREIGN_KEY | CC_ON_DELETE,
+            .value = "department|id"
+        }
+    },
+    {
+        .column_name = "branch_id",
+        .value = (column_information) {
+            .type = SQLITE_DBA_INTEGER
+        },
+        .constraints = &(column_constraints) {
+            .constraint_information = CC_FOREIGN_KEY | CC_ON_DELETE,
+            .value = "branch|id"
+        }
+    },
+    {
+        .column_name = "is_active",
+        .value = (column_information) {
+            .type = SQLITE_DBA_INTEGER
+        }
+    },
 };
 
 table_definition employee_table = {
-    "Employee",
-    (table_field_node*) (&employee_table_columns),
-    EMPLOYEE_TABLE_COLUMN_COUNT
+    .table_name = "employees",
+    .columns = (table_field_node*) (&employee_table_columns),
+    .column_count = EMPLOYEE_TABLE_COLUMN_COUNT
 };
 
 typedef struct {

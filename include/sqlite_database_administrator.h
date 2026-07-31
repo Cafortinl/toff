@@ -38,7 +38,17 @@ enum QUERY_FILTER_OPERATIONS {
     QF_LIKE,
     QF_EQUALS,
     QUERY_FILTER_OPERATIONS_COUNT
+};
 
+enum QUERY_FILTER_STATES {
+    QF_STATE_INIT,
+    QF_STATE_LEVAL,
+    QF_STATE_LPRINT,
+    QF_STATE_OPRINT,
+    QF_STATE_REVAL,
+    QF_STATE_RPRINT,
+    QF_STATE_FINAL,
+    QF_STATE_COUNT
 };
 
 typedef struct filter_node {
@@ -90,6 +100,21 @@ enum SQLITE_DATA_TYPES {
     SQLITE_DATA_TYPES_COUNT
 };
 
+/*
+ * Create a constraint for a specific table column.
+ *
+ * The available constraints include:
+ * Primary key constraints - Set by using the `CC_PRIMARY_KEY` macro.
+ * Foreign key constraints - Set by using the `CC_FOREIGN_KEY_KEY` macro.
+ * On delete behaviour - Set by using the `CC_ON_DELETE` macro. Default value `DO NOTHING`.
+ * Cascade behaviour - Set by using the `CC_CASCADE` macro.
+ * Unique constraints - Set by using the `CC_UNIQUE` macro.
+ * Default constraints - Set by using the `CC_DEFAULT` macro.
+ * Collation constraints - Set by using the `CC_COLLATION` macro.
+ *
+ * To evaluate the different constraints the different `CC_IS_XXXX` macros are used, where
+ * `XXXX` is replaced by the different constraint macros (e.g. `PRIMARY_KEY`, `DEFAULT`, etc).
+ */
 typedef struct {
     /*
      * bit 1: is_primary_key    - Mask: 0x1
@@ -105,9 +130,21 @@ typedef struct {
 } column_constraints;
 
 typedef struct {
+    enum SQLITE_DATA_TYPES type;
+    union {
+        int integer_value;
+        double float_value;
+        char* text_value;
+        struct {
+            const void* data;
+            size_t size;
+        } blob_value;
+    } as;
+} column_information;
+
+typedef struct {
     char* column_name;
-    char* value;
-    enum SQLITE_DATA_TYPES column_type; 
+    column_information value;
     column_constraints* constraints;
 } table_field_node;
 
@@ -260,8 +297,34 @@ query_result* sqlite_dba_delete_item(sqlite_database_administrator* dba, const c
  */
 bool sqlite_dba_check_if_table_exists(sqlite_database_administrator *dba, const char* table_name);
 
+/**
+ * Frees the resources allocated by the `sqlite_dba_execute_statement` function.
+ *
+ * @param `results` a pointer to the list of `query_result` structs to be freed.
+ */
 void sqlite_dba_query_result_free(query_result *results);
 
+/**
+ * Creates a table in the working database.
+ *
+ * The `sqlite_dba_create_table` function utilizes the information found in a `table_definition`
+ * struct to generate the code needed for a table creation, including (some) constraints.
+ *
+ * The creation of a `table_definition` struct involves `table_field_node` to define the different
+ * columns as well as `column_constraints` (when it applies) to set the constraints needed by the
+ * different functions.
+ *
+ * When the table already exists the function returns false.
+ *
+ * @param `dba` The pointer to the `sqlite_database_administrator` struct.
+ * @param `table` a pointer to a `table_definition` struct, defining the table to be created.
+ * @returns a `boolean` indicating if the table was able to be created or not.
+ *
+ * @see `sqlite_dba_check_if_table_exists`
+ * @see `table_definition`
+ * @see `table_field_node`
+ * @see `column_constraints`
+ */
 bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_definition *table);
 // EndSection: DBA
 #endif

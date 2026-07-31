@@ -3,3 +3,4 @@
 .cache/
 bin/*/
 compile_commands.json
+test_db.sqlite

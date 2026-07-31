@@ -1,14 +1,14 @@
 # Compiler Related Variables
 CXX        := clang
-CXX_FLAGS  := -Wall -Wextra -pedantic -g
+CXX_FLAGS  := -Wall -Wextra -pedantic #-g `pkg-config --cflags gtk4`
 
 # Project Specific Variables
 BIN		   := bin
 SRC		   := src
 INCLUDE	   := include
 LIB		   := lib
-LIBRARIES  := -lsqlite3
-EXECUTABLE := planner
+LIBRARIES  := -lsqlite3 #`pkg-config --libs gtk4`
+EXECUTABLE := toff
 
 
 all: $(BIN)/$(EXECUTABLE)

@@ -57,38 +57,67 @@ char* data_type_to_string(enum SQLITE_DATA_TYPES data_type) {
  * the different conditions for the query.
  * @param `str_builder` a pointer to the `sqlite3_str` struct in which the
  * condition string will be built.
+ * @param `state` an enum indicating the algorithm's current state. See `QUERY_FILTER_STATES`.
  */
 void query_filter_to_string_builder(
     const query_filter_node *filters,
-    sqlite3_str *str_builder
-) {
+    sqlite3_str *str_builder,
+    enum QUERY_FILTER_STATES state
+){
+    if (state == QF_STATE_INIT || state == QF_STATE_FINAL)
+        state = QF_STATE_LEVAL;
+
     int 
         left_type = filters->node_types >> 4,
         right_type = filters->node_types & 15
     ;
 
-    if (left_type == QF_NODE)
-        query_filter_to_string_builder(filters->left.node, str_builder);
+    if (state == QF_STATE_LEVAL) {
+        switch (left_type) {
+            case QF_NONE:
+                state = QF_STATE_OPRINT;
+                break;
+            case QF_TEXT:
+                state = QF_STATE_LPRINT;
+                break;
+            case QF_NODE:
+                sqlite3_str_appendf(str_builder, " (");
+                query_filter_to_string_builder(filters->left.node, str_builder, state);
+                sqlite3_str_appendf(str_builder, " )");
+                state = QF_STATE_OPRINT;
+                break;
+        }
+    }
 
-    if (left_type == QF_NONE)
-        sqlite3_str_appendf(
-            str_builder,
-            " %s ",
-            operation_to_string(filters->operation)
-        );
-    else
-        sqlite3_str_appendf(
-            str_builder,
-            " %s %s",
-            filters->left.text,
-            operation_to_string(filters->operation)
-        );
+    if (state == QF_STATE_LPRINT) {
+        sqlite3_str_appendf(str_builder, " %s", filters->left.text);
+        state = QF_STATE_OPRINT;
+    }
 
-    if (right_type == QF_NODE)
-        query_filter_to_string_builder(filters->right.node, str_builder);
+    if (state == QF_STATE_OPRINT) {
+        sqlite3_str_appendf(str_builder, " %s", operation_to_string(filters->operation));
+        state = QF_STATE_REVAL;
+    }
 
-    if (right_type == QF_TEXT)
-        sqlite3_str_appendf( str_builder, " %s", filters->right.text);
+    if (state == QF_STATE_REVAL) {
+        switch (right_type) {
+            case QF_NODE:
+                state = QF_STATE_LEVAL;
+                sqlite3_str_appendf(str_builder, " (");
+                query_filter_to_string_builder(filters->right.node, str_builder, state);
+                sqlite3_str_appendf(str_builder, " )");
+                state = QF_STATE_FINAL;
+                break;
+            case QF_TEXT:
+                state = QF_STATE_RPRINT;
+                break;
+        }
+    }
+
+    if (state == QF_STATE_RPRINT) {
+        sqlite3_str_appendf(str_builder, " %s", filters->right.text);
+        state = QF_STATE_FINAL;
+    }
 }
 
 char* sqlite_dba_query_filter_to_str(
@@ -96,21 +125,71 @@ char* sqlite_dba_query_filter_to_str(
     const query_filter_node *filter
 ) {
     sqlite3_str *str_builder = sqlite3_str_new(dba->database);
-    query_filter_to_string_builder(filter, str_builder);
+    query_filter_to_string_builder(filter, str_builder, QF_STATE_INIT);
     return sqlite3_str_finish(str_builder);
 }
 
 void sqlite_dba_query_result_free(query_result *results) {
     for (size_t i = 0; i < results->length; ++i) {
         free(results->columns[i].column_name);
-        free(results->columns[i].value);
+
+        if (results->columns[i].value.type == SQLITE_DBA_TEXT)
+            free(results->columns[i].value.as.text_value);
+
+        if (results->columns[i].value.type == SQLITE_DBA_BLOB)
+            free((void *) results->columns[i].value.as.blob_value.data);
     }
+    free(results->columns);
 
     results->columns = NULL;
     results->length = 0;
     results->column_count = 0;
 
     free(results);
+}
+
+void sqlite_dba_bind_values(
+    sqlite_database_administrator *dba,
+    const table_field_node* values,
+    const size_t values_length
+) {
+    if (!dba) {
+        fprintf(stderr, "sqlite_dba_bind_values - Error: no valid sqlite_database_administrator struct was provided.\n");
+        return;
+    }
+
+    if (!dba->database) {
+        fprintf(stderr, "sqlite_dba_bind_values - Error: no valid database connection.\n");
+        return;
+    }
+
+    for (size_t i = 0; i < values_length; ++i) {
+        column_information current_value = values[i].value;
+        switch (current_value.type) {
+            case SQLITE_DBA_INTEGER:
+                sqlite3_bind_int64(dba->statement, i + 1, current_value.as.integer_value);
+                break;
+
+            case SQLITE_DBA_FLOAT:
+                sqlite3_bind_double(dba->statement, i + 1, current_value.as.float_value);
+                break;
+
+            case SQLITE_DBA_TEXT:
+                sqlite3_bind_text(dba->statement, i + 1, current_value.as.text_value, -1, SQLITE_TRANSIENT);
+                break;
+
+            case SQLITE_DBA_BLOB:
+                sqlite3_bind_blob(dba->statement, i + 1, current_value.as.blob_value.data, (int) current_value.as.blob_value.size, SQLITE_TRANSIENT);
+                break;
+
+            case SQLITE_DBA_NULL:
+                sqlite3_bind_null(dba->statement, i + 1);
+                break;
+
+            default:
+                break;
+        }
+    }
 }
 
 sqlite_database_administrator* sqlite_dba_connect_to_db(const char* path) {
@@ -136,7 +215,7 @@ sqlite_database_administrator* sqlite_dba_connect_to_db(const char* path) {
     }
 
     dba->database = database;
-    dba->database_path = (char*) path;
+    dba->database_path = strdup(path);
 
     return dba;
 }
@@ -165,9 +244,10 @@ bool sqlite_dba_disconnect_from_db(sqlite_database_administrator *dba) {
         return false;
     }
 
+    free(dba->database_path);
     dba->database = NULL;
     dba->statement = NULL;
-    dba->database_path = NULL;
+    free(dba);
 
     return true;
 }
@@ -239,23 +319,39 @@ query_result* sqlite_dba_execute_statement(sqlite_database_administrator* dba) {
         for (size_t i = 0; i < column_count; ++i) {
             if (index == (int) query_results_capacity - 1) {
                 query_results_capacity *= 2;
-                results->columns = (table_field_node*) realloc(results->columns, sizeof(table_field_node) * query_results_capacity);
+                results->columns = (table_field_node*) realloc(results->columns, sizeof(table_field_node) * column_count * query_results_capacity);
             }
-            char* column_name = (char*) sqlite3_column_name(dba->statement, i);
-            char* value = (char*) sqlite3_column_text(dba->statement, i);
 
-            if (!value)
-                value = (char*) "";
-
-            //SQLite Fundamental Datatypes = enum SQLITE_DATA_TYPES + 1
+            //SQLite Fundamental Datatypes = enum SQLITE_DATA_TYPES - 1
             //https://sqlite.org/c3ref/c_blob.html
-            results->columns[index].column_type = (enum SQLITE_DATA_TYPES) (sqlite3_column_type(dba->statement, i) + 1);
+            results->columns[index].value.type = (enum SQLITE_DATA_TYPES) (sqlite3_column_type(dba->statement, i) - 1);
 
-            results->columns[index].column_name = (char*) calloc(strlen(column_name) + 1, sizeof(char));
-            memcpy(results->columns[index].column_name, column_name, strlen(column_name) + 1);
+            results->columns[index].column_name = strdup((char*) sqlite3_column_name(dba->statement, i));
 
-            results->columns[index].value = (char*) calloc(strlen(value) + 1, sizeof(char));
-            memcpy(results->columns[index].value, value, strlen(value) + 1);
+            switch (results->columns[index].value.type) {
+                case SQLITE_DBA_INTEGER:
+                    results->columns[index].value.as.integer_value = sqlite3_column_int(dba->statement, i);
+                    break;
+
+                case SQLITE_DBA_FLOAT:
+                    results->columns[index].value.as.float_value = sqlite3_column_double(dba->statement, i);
+                    break;
+
+                case SQLITE_DBA_TEXT:
+                    results->columns[index].value.as.text_value = strdup((char *) sqlite3_column_text(dba->statement, i));
+                    break;
+
+                case SQLITE_DBA_BLOB: {
+                    size_t blob_size = sqlite3_column_bytes(dba->statement, i);
+                    results->columns[index].value.as.blob_value.data = malloc(blob_size);
+                    memcpy((void *) results->columns[index].value.as.blob_value.data, sqlite3_column_blob(dba->statement, i), blob_size);
+                    break;
+                }
+
+                case SQLITE_DBA_NULL:
+                default:
+                  break;
+            }
             ++index;
         }
     }
@@ -309,7 +405,7 @@ query_result* sqlite_dba_insert_item(
 
     sqlite3_str *query_builder = sqlite3_str_new(dba->database);
     sqlite3_str *fields_builder = sqlite3_str_new(dba->database);
-    sqlite3_str *field_values_builder = sqlite3_str_new(dba->database);
+    sqlite3_str *values_placeholder_builder = sqlite3_str_new(dba->database);
 
     for (size_t i = 0; i < values_length; ++i) {
         sqlite3_str_appendf(
@@ -320,34 +416,34 @@ query_result* sqlite_dba_insert_item(
         );
 
         sqlite3_str_appendf(
-            field_values_builder,
-            "%s%s",
-            sqlite3_str_length(field_values_builder) == 0 ? "" : ", ",
-            values[i].value
+            values_placeholder_builder,
+            "%s?",
+            sqlite3_str_length(values_placeholder_builder) == 0 ? "" : ", "
         );
     }
     
-    char *query, *fields, *field_values;
+    char *query, *fields, *values_placeholder;
     fields = sqlite3_str_finish(fields_builder);
-    field_values = sqlite3_str_finish(field_values_builder);
+    values_placeholder = sqlite3_str_finish(values_placeholder_builder);
 
     sqlite3_str_appendf(
         query_builder,
         "INSERT INTO %s (%s) VALUES (%s);",
         table_name,
         fields,
-        field_values
+        values_placeholder
     );
     sqlite3_free(fields);
-    sqlite3_free(field_values);
+    sqlite3_free(values_placeholder);
 
     query = sqlite3_str_finish(query_builder);
     bool statement_prepared = sqlite_dba_prepare_statement(dba, query);
-
     sqlite3_free(query);
 
     if (!statement_prepared)
         return NULL;
+
+    sqlite_dba_bind_values(dba, values, values_length);
 
     query_result *results = sqlite_dba_execute_statement(dba);
 
@@ -388,7 +484,7 @@ query_result* sqlite_dba_fetch_items(
             columns_builder,
             "%s%s",
             sqlite3_str_length(columns_builder) == 0 ? "" : ", ",
-            fields[i].value
+            fields[i].column_name
         );
     }
 
@@ -469,10 +565,9 @@ query_result* sqlite_dba_update_item(
     for (size_t i = 0; i < values_length; ++i) {
         sqlite3_str_appendf(
             field_updates_builder,
-            "%s%s=%s",
+            "%s%s=?",
             sqlite3_str_length(field_updates_builder) == 0 ? "" : ", ",
-            values[i].column_name,
-            values[i].value
+            values[i].column_name
         );
     }
     field_updates = sqlite3_str_finish(field_updates_builder);
@@ -502,6 +597,8 @@ query_result* sqlite_dba_update_item(
 
     if (!statement_created)
         return NULL;
+
+    sqlite_dba_bind_values(dba, values, values_length);
 
     query_result *results = sqlite_dba_execute_statement(dba);
 
@@ -585,7 +682,7 @@ bool sqlite_dba_check_if_table_exists(sqlite_database_administrator *dba, const 
     sqlite3_str *query_builder = sqlite3_str_new(dba->database);
     sqlite3_str_appendf(
         query_builder,
-        "SELECT name FROM sqlite_master WHERE type='table' and name='%s';",
+        "SELECT name FROM sqlite_master WHERE type='table' and name=%Q;",
         table_name
     );
     char* query = sqlite3_str_finish(query_builder);
@@ -715,7 +812,7 @@ bool sqlite_dba_create_table(sqlite_database_administrator *dba, const table_def
             query_builder,
             "%s %s%s%s",
             current_column.column_name,
-            data_type_to_string(current_column.column_type),
+            data_type_to_string(current_column.value.type),
             inline_constraints ? inline_constraints : "",
             i < (table->column_count - 1) ? ", " : ""
         );
