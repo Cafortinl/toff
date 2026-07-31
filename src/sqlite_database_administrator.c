@@ -315,45 +315,59 @@ query_result* sqlite_dba_execute_statement(sqlite_database_administrator* dba) {
     results->columns = (table_field_node*) malloc(sizeof(table_field_node) * column_count * query_results_capacity);
 
     int step, index = 0;
-    while ((step = sqlite3_step(dba->statement)) != SQLITE_DONE) {
-        for (size_t i = 0; i < column_count; ++i) {
-            if (index == (int) query_results_capacity - 1) {
-                query_results_capacity *= 2;
-                results->columns = (table_field_node*) realloc(results->columns, sizeof(table_field_node) * column_count * query_results_capacity);
-            }
+    while (true) {
+        step = sqlite3_step(dba->statement);
 
-            //SQLite Fundamental Datatypes = enum SQLITE_DATA_TYPES - 1
-            //https://sqlite.org/c3ref/c_blob.html
-            results->columns[index].value.type = (enum SQLITE_DATA_TYPES) (sqlite3_column_type(dba->statement, i) - 1);
-
-            results->columns[index].column_name = strdup((char*) sqlite3_column_name(dba->statement, i));
-
-            switch (results->columns[index].value.type) {
-                case SQLITE_DBA_INTEGER:
-                    results->columns[index].value.as.integer_value = sqlite3_column_int(dba->statement, i);
-                    break;
-
-                case SQLITE_DBA_FLOAT:
-                    results->columns[index].value.as.float_value = sqlite3_column_double(dba->statement, i);
-                    break;
-
-                case SQLITE_DBA_TEXT:
-                    results->columns[index].value.as.text_value = strdup((char *) sqlite3_column_text(dba->statement, i));
-                    break;
-
-                case SQLITE_DBA_BLOB: {
-                    size_t blob_size = sqlite3_column_bytes(dba->statement, i);
-                    results->columns[index].value.as.blob_value.data = malloc(blob_size);
-                    memcpy((void *) results->columns[index].value.as.blob_value.data, sqlite3_column_blob(dba->statement, i), blob_size);
-                    break;
+        if (step == SQLITE_ROW) {
+            for (size_t i = 0; i < column_count; ++i) {
+                if (index == (int) query_results_capacity - 1) {
+                    query_results_capacity *= 2;
+                    results->columns = (table_field_node*) realloc(results->columns, sizeof(table_field_node) * column_count * query_results_capacity);
                 }
 
-                case SQLITE_DBA_NULL:
-                default:
-                  break;
+                //SQLite Fundamental Datatypes = enum SQLITE_DATA_TYPES - 1
+                //https://sqlite.org/c3ref/c_blob.html
+                results->columns[index].value.type = (enum SQLITE_DATA_TYPES) (sqlite3_column_type(dba->statement, i) - 1);
+
+                results->columns[index].column_name = strdup((char*) sqlite3_column_name(dba->statement, i));
+
+                switch (results->columns[index].value.type) {
+                    case SQLITE_DBA_INTEGER:
+                        results->columns[index].value.as.integer_value = sqlite3_column_int(dba->statement, i);
+                        break;
+
+                    case SQLITE_DBA_FLOAT:
+                        results->columns[index].value.as.float_value = sqlite3_column_double(dba->statement, i);
+                        break;
+
+                    case SQLITE_DBA_TEXT:
+                        results->columns[index].value.as.text_value = strdup((char *) sqlite3_column_text(dba->statement, i));
+                        break;
+
+                    case SQLITE_DBA_BLOB: {
+                        size_t blob_size = sqlite3_column_bytes(dba->statement, i);
+                        results->columns[index].value.as.blob_value.data = malloc(blob_size);
+                        memcpy((void *) results->columns[index].value.as.blob_value.data, sqlite3_column_blob(dba->statement, i), blob_size);
+                        break;
+                    }
+
+                    case SQLITE_DBA_NULL:
+                    default:
+                      break;
+                }
+                ++index;
             }
-            ++index;
+            continue;
         }
+
+        if (step == SQLITE_DONE)
+            break;
+
+        fprintf(stderr, "sqlite_dba_execute_statement: sqlite3_step failed. Error code: %d, message: %s\n", step, sqlite3_errmsg(dba->database));
+        sqlite_dba_query_result_free(results);
+        sqlite3_finalize(dba->statement);
+        dba->statement = NULL;
+        return NULL;
     }
     results->length = index;
 
