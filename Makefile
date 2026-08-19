@@ -1,6 +1,6 @@
 # Compiler Related Variables
 CXX        := clang
-CXX_FLAGS  := -Wall -Wextra -pedantic #-g `pkg-config --cflags gtk4`
+CXX_FLAGS  := -Wall -Wextra -pedantic -g #`pkg-config --cflags gtk4`
 
 # Project Specific Variables
 BIN		   := bin

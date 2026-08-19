@@ -11,10 +11,52 @@
 #include "sqlite_database_administrator.h"
 #include "vacation.h"
 
+#define GRID_ROWS    6
+#define GRID_COLUMNS 7
+
+// Section: Data Containers
+/**
+ * Stores `query_result` information in a specific data type.
+ */
 typedef struct {
     size_t size;
     void* data;
 } result_information;
+
+/**
+ * Stores all the information and events related to a specific day.
+ */
+typedef struct {
+    bool is_event;
+    bool is_weekend;
+    bool is_holiday;
+    char** vacation_information;
+    size_t vacation_information_size;
+} day_event_information;
+
+/**
+ *  Stores all the information to be shown in the calendar grid.
+ */
+typedef struct {
+    time_t start_date;
+    time_t end_date;
+    day_event_information day_information[GRID_ROWS * GRID_COLUMNS];
+} calendar_day_information;
+
+void result_information_free(
+    result_information *results,
+    void (*extra_processing)(result_information*)
+) {
+    if (extra_processing) {
+        extra_processing(results);
+    }
+
+    free(results->data);
+    results->data = NULL;
+    free(results);
+    results = NULL;
+}
+// EndSection: Data Containers
 
 /*
  *  Returns the last date in the given month.
@@ -132,13 +174,11 @@ end:
     return results;
 }
 
-void holiday_result_information_free(result_information *holidays) {
+void holiday_result_extra_processing(result_information *holidays) {
+    printf("Executing holiday_result_extra_processing\n");
     for (size_t i = 0; i < holidays->size; ++i) {
         free(((holiday*) holidays->data)[i].name);
     }
-    free(holidays->data);
-    holidays->data = NULL;
-    free(holidays);
 }
 
 result_information* get_vacations_in_date_range(
@@ -186,11 +226,21 @@ result_information* get_vacations_in_date_range(
         .operation = QF_AND
     };
 
+    table_field_node columns_to_fetch[VACATION_TABLE_COLUMN_COUNT + 1] = {
+        {.column_name = "v.id"},
+        {.column_name = "v.employee_id"},
+        {.column_name = "v.start_date"},
+        {.column_name = "v.end_date"},
+        {.column_name = "v.number_of_days"},
+        {.column_name = "v.date_solicited"},
+        {.column_name = "e.name"}
+    };
+
     query_result *query_results = sqlite_dba_fetch_items(
         dba,
-        vacation_table.table_name,
-        vacation_table_columns,
-        VACATION_TABLE_COLUMN_COUNT,
+        "vacations v JOIN employees e ON v.employee_id = e.id",
+        columns_to_fetch,
+        VACATION_TABLE_COLUMN_COUNT + 1,
         date_filters
     );
     if (!results) {
@@ -199,16 +249,6 @@ result_information* get_vacations_in_date_range(
 
     vacation *vacations = malloc(sizeof(vacation) * (query_results->length / query_results->column_count));
     for (size_t i = 0; i < query_results->length; i += query_results->column_count) {
-        /*
-         *  Given that `results` was queried using `vacation_table_columns` in
-         *  the `fields` param we know for a fact that:
-         *  - results->columns[i + 0] = id,
-         *  - results->columns[i + 1] = employee_id,
-         *  - results->columns[i + 2] = start_date,
-         *  - results->columns[i + 3] = end_date,
-         *  - results->columns[i + 4] = number_of_days,
-         *  - results->columns[i + 5] = date_solicited
-         */
         int year, month, day;
 
         sscanf(query_results->columns[i + 2].value.as.text_value, "%d-%d-%d", &year, &month, &day);
@@ -238,7 +278,8 @@ result_information* get_vacations_in_date_range(
             .employee_id = query_results->columns[i + 1].value.as.integer_value,
             .start_date = mktime(&start_date_builder),
             .end_date = mktime(&end_date_builder),
-            .date_solicited = mktime(&date_solicited_builder)
+            .date_solicited = mktime(&date_solicited_builder),
+            .employe_name = strdup(query_results->columns[i + 6].value.as.text_value)
         };
     }
     results->size = query_results->length / query_results->column_count;
@@ -250,10 +291,11 @@ end:
     return results;
 }
 
-void vacation_result_information_free(result_information *vacations) {
-    free(vacations->data);
-    vacations->data = NULL;
-    free(vacations);
+void vacation_result_extra_processing(result_information *vacations) {
+    printf("Executing vacation_result_extra_processing\n");
+    for (size_t i = 0; i < vacations->size; ++i) {
+        free(((vacation*) vacations->data)[i].employe_name);
+    }
 }
 
 int main(void) {
@@ -278,11 +320,24 @@ int main(void) {
     time_t end_date = mktime(&end_date_builder);
 
     result_information *holidays = get_holidays_in_date_range(dba, start_date, end_date);
-    for (size_t i = 0; i < holidays->size; ++i) {
-        holiday current_holiday = ((holiday*) holidays->data)[i];
-        printf("%zu. %s - (%s - %s)\n", i + 1, current_holiday.name, ctime(&current_holiday.start_date), ctime(&current_holiday.end_date));
+    result_information *vacations = get_vacations_in_date_range(dba, start_date, end_date);
+    for (size_t i = 0; i < vacations->size; ++i) {
+        vacation current_vacation = ((vacation*) vacations->data)[i];
+
+        char start_date_str[11];
+        char end_date_str[11];
+        char date_solicited_str[11];
+
+        strftime(start_date_str, 11, "%F", localtime(&(current_vacation.start_date)));
+        strftime(end_date_str, 11, "%F", localtime(&(current_vacation.end_date)));
+        strftime(date_solicited_str, 11, "%F", localtime(&(current_vacation.date_solicited)));
+
+        printf("%zu. %s - %d days (%s - %s) - solicited: %s\n", i + 1, current_vacation.employe_name, current_vacation.number_of_days, start_date_str, end_date_str, date_solicited_str);
     }
-    holiday_result_information_free(holidays);
+
+
+    result_information_free(holidays, &holiday_result_extra_processing);
+    result_information_free(vacations, &vacation_result_extra_processing);
     
     bool successful_disconnection = sqlite_dba_disconnect_from_db(dba);
     if (!successful_disconnection) {

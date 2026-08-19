@@ -63,6 +63,7 @@ typedef struct {
     int id;
     int number_of_days;
     int employee_id;
+    char* employe_name;
     time_t start_date;
     time_t end_date;
     time_t date_solicited;
