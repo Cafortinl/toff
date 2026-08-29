@@ -1,14 +1,14 @@
-#ifndef HOLIDAY_H
-#define HOLIDAY_H
+#ifndef EVENT_H
+#define EVENT_H
 
 #include <time.h>
 
 #include "date_utilities.h"
 #include "sqlite_database_administrator.h"
 
-#define HOLIDAY_TABLE_COLUMN_COUNT 4
+#define EVENT_TABLE_COLUMN_COUNT 4
 
-table_field_node holiday_table_columns[HOLIDAY_TABLE_COLUMN_COUNT] = {
+table_field_node event_table_columns[EVENT_TABLE_COLUMN_COUNT] = {
     {
         .column_name = "id",
         .value = (column_information) {
@@ -39,15 +39,15 @@ table_field_node holiday_table_columns[HOLIDAY_TABLE_COLUMN_COUNT] = {
     },
 };
 
-table_definition holiday_table = {
-    .table_name = "holidays",
-    .columns = (table_field_node*) (&holiday_table_columns),
-    .column_count = HOLIDAY_TABLE_COLUMN_COUNT
+table_definition event_table = {
+    .table_name = "events",
+    .columns = (table_field_node*) (&event_table_columns),
+    .column_count = EVENT_TABLE_COLUMN_COUNT
 };
 
 typedef struct {
     int id;
     char* name;
     date_range dates;
-} holiday;
+} event;
 #endif

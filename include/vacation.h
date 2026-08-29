@@ -1,7 +1,9 @@
 #ifndef VACATION_H
 #define VACATION_H
 
-#include "time.h"
+#include <time.h>
+
+#include "date_utilities.h"
 #include "sqlite_database_administrator.h"
 
 #define VACATION_TABLE_COLUMN_COUNT 6
@@ -64,8 +66,7 @@ typedef struct {
     int number_of_days;
     int employee_id;
     char* employe_name;
-    time_t start_date;
-    time_t end_date;
+    date_range dates;
     time_t date_solicited;
 } vacation;
 
@@ -94,10 +95,10 @@ bool create_vacation(const sqlite_database_administrator *dba, const vacation *d
             " '%s'"
         ");",
         data->employee_id,
-        data->start_date,
-        data->end_date,
-        data->start_date,
-        data->end_date,
+        data->dates.start_date,
+        data->dates.end_date,
+        data->dates.start_date,
+        data->dates.end_date,
         free_saturdays ? (char*) "'0', '6'" : (char*) "'0'",
         data->date_solicited
     );
