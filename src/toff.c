@@ -63,7 +63,7 @@ void result_information_free(
 void day_event_information_free(day_event_information *day_information) {
     for (size_t i = 0; i < day_information->vacations_size; ++i) {
         if (i < day_information->vacations_count)
-            free(day_information->vacations[i].employe_name);
+            free(day_information->vacations[i].employee_name);
     }
 }
 
@@ -375,7 +375,7 @@ result_information* get_vacations_in_date_range(
                 .end_date = mktime(&end_date_builder)
             },
             .date_solicited = mktime(&date_solicited_builder),
-            .employe_name = strdup(query_results->columns[i + 6].value.as.text_value)
+            .employee_name = strdup(query_results->columns[i + 6].value.as.text_value)
         };
     }
     results->size = query_results->length / query_results->column_count;
@@ -389,7 +389,7 @@ end:
 
 void vacation_result_extra_processing(result_information *vacations) {
     for (size_t i = 0; i < vacations->size; ++i) {
-        free(((vacation*) vacations->data)[i].employe_name);
+        free(((vacation*) vacations->data)[i].employee_name);
     }
 }
 
@@ -409,6 +409,8 @@ calendar_day_information* populate_calendar_information(sqlite_database_administ
     strftime(start_date_str, 11, "%F", localtime(&(dates.start_date)));
     char end_date_str[11];
     strftime(end_date_str, 11, "%F", localtime(&(dates.end_date)));
+
+    printf("Date range: %s - %s\n", start_date_str, end_date_str);
 
     calendar_day_information *calendar_information = malloc(sizeof(calendar_day_information) * 1);
     calendar_information->dates = dates;
@@ -462,7 +464,7 @@ calendar_day_information* populate_calendar_information(sqlite_database_administ
                 continue;
 
             memcpy(&(current_day.vacations[current_day.vacations_count]), &current_vacation, sizeof(vacation) * 1);
-            current_day.vacations[current_day.vacations_count].employe_name = strdup(current_vacation.employe_name);
+            current_day.vacations[current_day.vacations_count].employee_name = strdup(current_vacation.employee_name);
             ++current_day.vacations_count;
         }
 
@@ -495,7 +497,7 @@ int main(void) {
         return 1;
     }
 
-    calendar_day_information *calendar_information = populate_calendar_information(dba, 4, 2026);
+    calendar_day_information *calendar_information = populate_calendar_information(dba, 8, 2026);
 
     for (size_t i = 0; i < GRID_ROWS * GRID_COLUMNS; ++i) {
         day_event_information day_information = calendar_information->day_information[i];
@@ -503,7 +505,7 @@ int main(void) {
         char date_str[11];
         strftime(date_str, 11, "%F", localtime(&day_information.date));
 
-        printf("%s - is_event: %d, is_holiday: %d, is_weekend: %d\n", date_str, day_information.is_event, day_information.is_holiday, day_information.is_weekend);
+        printf("%zu. %s - is_event: %d, is_holiday: %d, is_weekend: %d\n", i, date_str, day_information.is_event, day_information.is_holiday, day_information.is_weekend);
         
         if (day_information.vacations_count == 0)
             continue;
@@ -517,7 +519,7 @@ int main(void) {
             char end_date_str[11];
             strftime(end_date_str, 11, "%F", localtime(&(current_vacation.dates.end_date)));
 
-            printf("%s (%s - %s)%s", current_vacation.employe_name, start_date_str, end_date_str, j != day_information.vacations_count - 1 ? ", " : "");
+            printf("%s (%s - %s)%s", current_vacation.employee_name, start_date_str, end_date_str, j != day_information.vacations_count - 1 ? ", " : "");
         }
         printf("\n");
     }

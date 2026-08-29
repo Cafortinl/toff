@@ -37,30 +37,10 @@ date_range generate_calendar_date_range(int month, int year) {
         start_date = mktime(&start_date_builder);
     }
 
-    int last_date = get_month_last_date(2, 2026);
-    struct tm end_date_builder = {
-        .tm_year = 2026 - 1900,
-        .tm_mon = 2,
-        .tm_mday = last_date
-    };
-    time_t end_date = mktime(&end_date_builder);
+    struct tm end_date_builder = *localtime(&start_date);
+    end_date_builder.tm_mday += 41;
 
-    int end_date_week_day = localtime(&end_date)->tm_wday;
-    /*
-     *  Offsetting the last day to query depending of the last day of the
-     *  month.
-     *
-     *  tm_wday: 1  2  3  4  5  6  0
-     *  offset: [6][5][4][3][2][1][0]
-     */
-    if (end_date_week_day != 0) {
-        struct tm end_date_builder = {
-            .tm_year = year - 1900,
-            .tm_mon = month - 1,
-            .tm_mday = last_date + (end_date_week_day == 0 ? 0 : 7 - end_date_week_day)
-        };
-        end_date = mktime(&end_date_builder);
-    }
+    time_t end_date = mktime(&end_date_builder);
 
     return (date_range) { .start_date = start_date, .end_date = end_date };
 }

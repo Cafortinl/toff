@@ -83,13 +83,13 @@ typedef struct filter_node {
 #define CC_CASCADE 0x40
 
 //Column Constraint Functions
-#define CC_IS_PRIMARY_KEY(x) x & CC_PRIMARY_KEY
-#define CC_IS_FOREIGN_KEY(x) x & CC_FOREIGN_KEY
-#define CC_IS_UNIQUE(x) x & CC_UNIQUE
-#define CC_IS_DEFAULT(x) x & CC_DEFAULT
-#define CC_IS_COLLATION(x) x & CC_COLLATION
-#define CC_IS_ON_DELETE(x) x & CC_ON_DELETE
-#define CC_IS_CASCADE(x) x & CC_CASCADE
+#define CC_IS_PRIMARY_KEY(x) (x & CC_PRIMARY_KEY)
+#define CC_IS_FOREIGN_KEY(x) (x & CC_FOREIGN_KEY)
+#define CC_IS_UNIQUE(x)      (x & CC_UNIQUE)
+#define CC_IS_DEFAULT(x)     (x & CC_DEFAULT)
+#define CC_IS_COLLATION(x)   (x & CC_COLLATION)
+#define CC_IS_ON_DELETE(x)   (x & CC_ON_DELETE)
+#define CC_IS_CASCADE(x)     (x & CC_CASCADE)
 
 enum SQLITE_DATA_TYPES {
     SQLITE_DBA_INTEGER,
