@@ -61,16 +61,17 @@ void result_information_free(
 }
 
 void day_event_information_free(day_event_information *day_information) {
-    for (size_t i = 0; i < day_information->vacations_size; ++i) {
-        if (i < day_information->vacations_count)
-            free(day_information->vacations[i].employee_name);
+    for (size_t i = 0; i < day_information->vacations_count; ++i) {
+        free(day_information->vacations[i].employee_name);
     }
+    free(day_information->vacations);
 }
 
 void calendar_day_information_free(calendar_day_information *calendar_information) {
     for (size_t i = 0; i < GRID_ROWS * GRID_COLUMNS; ++i) {
         day_event_information_free(&(calendar_information->day_information[i]));
     }
+    free(calendar_information);
 }
 // EndSection: Data Containers
 
@@ -506,7 +507,7 @@ int main(void) {
         strftime(date_str, 11, "%F", localtime(&day_information.date));
 
         printf("%zu. %s - is_event: %d, is_holiday: %d, is_weekend: %d\n", i, date_str, day_information.is_event, day_information.is_holiday, day_information.is_weekend);
-        
+
         if (day_information.vacations_count == 0)
             continue;
 
@@ -525,6 +526,30 @@ int main(void) {
     }
 
     calendar_day_information_free(calendar_information);
+
+    // query_result *results = sqlite_dba_fetch_items(dba, vacation_table.table_name, NULL, 0, NULL);
+    //
+    // for (size_t i = 0; i < results->length; ++i) {
+    //     if (i % results->column_count == 0)
+    //         printf("\n%zu.", i);
+    //
+    //     column_information current_column = results->columns[i].value;
+    //     switch (current_column.type) {
+    //         case SQLITE_DBA_INTEGER:
+    //             printf(" %d", current_column.as.integer_value);
+    //             break;
+    //         case SQLITE_DBA_FLOAT:
+    //             printf(" %f", current_column.as.float_value);
+    //             break;
+    //         case SQLITE_DBA_TEXT:
+    //             printf(" %s", current_column.as.text_value);
+    //             break;
+    //         default:
+    //             break;
+    //     }
+    // }
+    //
+    // sqlite_dba_query_result_free(results);
 
     bool successful_disconnection = sqlite_dba_disconnect_from_db(dba);
     if (!successful_disconnection) {
