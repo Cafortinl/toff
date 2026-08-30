@@ -1,14 +1,14 @@
 # Compiler Related Variables
-CXX        := clang++
-CXX_FLAGS  := -Wall -Wextra -pedantic
+CXX        := clang
+CXX_FLAGS  := -Wall -Wextra -pedantic -g #`pkg-config --cflags gtk4`
 
 # Project Specific Variables
 BIN		   := bin
 SRC		   := src
 INCLUDE	   := include
 LIB		   := lib
-LIBRARIES  := -lsqlite3
-EXECUTABLE := planner
+LIBRARIES  := -lsqlite3 #`pkg-config --libs gtk4`
+EXECUTABLE := toff
 
 
 all: $(BIN)/$(EXECUTABLE)
@@ -18,7 +18,7 @@ run: clean all
 	@echo "Executing...\n"
 	./$(BIN)/$(EXECUTABLE)
 
-$(BIN)/$(EXECUTABLE): $(SRC)/*.cpp
+$(BIN)/$(EXECUTABLE): $(SRC)/*.c
 	@echo "Building...\n"
 	$(CXX) $(CXX_FLAGS) -I$(INCLUDE) -L$(LIB) $^ -o $@ $(LIBRARIES)
 

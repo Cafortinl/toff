@@ -1,4 +1,6 @@
 ._*
 .DS_Store
 .cache/
-bin/*
+bin/*/
+compile_commands.json
+test_db.sqlite
