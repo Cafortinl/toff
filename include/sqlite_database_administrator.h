@@ -19,14 +19,14 @@ extern "C" {
 // Section: Query Filters
 #define SET_NODETYPES(left, right) (((left) << 4) | (right))
 
-enum QUERY_FILTER_NODE_TYPE {
+enum query_filter_node_type {
     QF_NONE,
     QF_TEXT,
     QF_NODE,
     QUERY_FILTER_NODE_TYPE_COUNT
 };
 
-enum QUERY_FILTER_OPERATIONS {
+enum query_filter_operations {
     QF_NOT,
     QF_AND,
     QF_OR,
@@ -40,7 +40,7 @@ enum QUERY_FILTER_OPERATIONS {
     QUERY_FILTER_OPERATIONS_COUNT
 };
 
-enum QUERY_FILTER_STATES {
+enum query_filter_states {
     QF_STATE_INIT,
     QF_STATE_LEVAL,
     QF_STATE_LPRINT,
@@ -66,7 +66,7 @@ typedef struct filter_node {
     //& 15 -> right node type
     uint8_t node_types;
 
-    enum QUERY_FILTER_OPERATIONS operation;
+    enum query_filter_operations operation;
 } query_filter_node;
 
 // EndSection: Query Filters
@@ -91,7 +91,7 @@ typedef struct filter_node {
 #define CC_IS_ON_DELETE(x)   (x & CC_ON_DELETE)
 #define CC_IS_CASCADE(x)     (x & CC_CASCADE)
 
-enum SQLITE_DATA_TYPES {
+enum sqlite_data_types {
     SQLITE_DBA_INTEGER,
     SQLITE_DBA_FLOAT,
     SQLITE_DBA_TEXT,
@@ -130,7 +130,7 @@ typedef struct {
 } column_constraints;
 
 typedef struct {
-    enum SQLITE_DATA_TYPES type;
+    enum sqlite_data_types type;
     union {
         int integer_value;
         double float_value;

@@ -1,0 +1,72 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface domain="/org/loveless/toff">
+    <object class="GtkApplicationWindow" id="app_window">
+        <property name="title" translatable="yes">TOFF: Employee Time Off Administrator</property>
+        <property name="default-width">800</property>
+        <property name="default-height">600</property>
+        <child>
+            <object class="GtkBox" id="content_box">
+                <property name="orientation">vertical</property>
+                <property name="spacing">2</property>
+                <child>
+                    <object class="GtkStackSwitcher" id="view_switcher">
+                        <property name="stack">view_stack</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkStack" id="view_stack">
+                        <!-- Calendar View -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">calendar_view</property>
+                                <property name="title">Calendar</property>
+                                <property name="child">
+                                    <object class="ToffCalendarView" id="calendar_view"> </object>
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Events View -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">events_view</property>
+                                <property name="title">Events</property>
+                                <property name="child">
+                                    <object class="GtkLabel">
+                                        <property name="label">This is the events view...</property>
+                                    </object>
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Employees View -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">employees_view</property>
+                                <property name="title">Employees</property>
+                                <property name="child">
+                                    <object class="GtkLabel">
+                                        <property name="label">This is the employees view...</property>
+                                    </object>
+                                </property>
+                            </object>
+                        </child>
+
+                        <!-- Documents View -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">documents_view</property>
+                                <property name="title">Documents</property>
+                                <property name="child">
+                                    <object class="GtkLabel">
+                                        <property name="label">This is the documents view...</property>
+                                    </object>
+                                </property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+            </object>
+        </child>
+    </object>
+</interface>

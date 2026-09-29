@@ -1,6 +1,6 @@
-#include "event.h"
+#include "calendar_event.h"
 
-table_field_node event_table_columns[EVENT_TABLE_COLUMN_COUNT] = {
+table_field_node calendar_event_table_columns[CALENDAR_EVENT_TABLE_COLUMN_COUNT] = {
     {
         .column_name = "id",
         .value = (column_information) {
@@ -31,8 +31,8 @@ table_field_node event_table_columns[EVENT_TABLE_COLUMN_COUNT] = {
     },
 };
 
-table_definition event_table = {
+table_definition calendar_event_table = {
     .table_name = "events",
-    .columns = (table_field_node*) (&event_table_columns),
-    .column_count = EVENT_TABLE_COLUMN_COUNT
+    .columns = (table_field_node*) (&calendar_event_table_columns),
+    .column_count = CALENDAR_EVENT_TABLE_COLUMN_COUNT
 };
