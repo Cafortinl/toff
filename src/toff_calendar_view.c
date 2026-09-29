@@ -45,7 +45,6 @@ void populate_calendar_grid(ToffCalendarView *self) {
     strftime(start_date_str, 11, "%F", localtime(&(dates.start_date)));
     char end_date_str[11];
     strftime(end_date_str, 11, "%F", localtime(&(dates.end_date)));
-    g_print("Date range: %s - %s\n", start_date_str, end_date_str);
 
     //Querying calendar information in date range
     result_information *holidays = get_holidays_in_date_range(dba, dates);
@@ -140,40 +139,36 @@ end:
     }
 }
 
-static void toff_calendar_view_dispose(GObject *gobject) {
-    ToffCalendarView *self = TOFF_CALENDAR_VIEW(gobject);
+static void handle_month_change(GObject *self, GParamSpec *pspec, gpointer user_data) {
+    ToffCalendarView *parent = TOFF_CALENDAR_VIEW(user_data);
+
+    parent->month = gtk_drop_down_get_selected(GTK_DROP_DOWN(self)) + 1;
+    
+    populate_calendar_grid(parent);
+}
+
+static void handle_year_change(GObject *self, gpointer user_data) {
+    ToffCalendarView *parent = TOFF_CALENDAR_VIEW(user_data);
+
+    parent->year = gtk_spin_button_get_value_as_int(GTK_SPIN_BUTTON(self));
+
+    populate_calendar_grid(parent);
+}
+
+static void toff_calendar_view_dispose(GObject *object) {
+    ToffCalendarView *self = TOFF_CALENDAR_VIEW(object);
 
     //Clearing the template children
     gtk_widget_dispose_template(GTK_WIDGET(self), TOFF_TYPE_CALENDAR_VIEW);
 
     //Chaining up to parent's dispose implementation
-    G_OBJECT_CLASS(toff_calendar_view_parent_class)->dispose(gobject);
-}
-
-static void toff_calendar_view_constructed(GObject *gobject) {
-    ToffCalendarView *self = TOFF_CALENDAR_VIEW(gobject);
-
-    //Setting current time info
-    time_t time_now = time(NULL);
-    struct tm *current_time = localtime(&time_now);
-
-    self->month = current_time->tm_mon + 1;
-    self->year = current_time->tm_year + 1900;
-
-    gtk_drop_down_set_selected(GTK_DROP_DOWN(self->month_selector), self->month - 1);
-    gtk_spin_button_set_value(GTK_SPIN_BUTTON(self->year_selector), self->year);
-
-    populate_calendar_grid(self);
-
-    //Chaining up to parent's constructed implementation
-    G_OBJECT_CLASS(toff_calendar_view_parent_class)->constructed(gobject);
+    G_OBJECT_CLASS(toff_calendar_view_parent_class)->dispose(object);
 }
 
 static void toff_calendar_view_class_init(ToffCalendarViewClass *klass) {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
 
     object_class->dispose = toff_calendar_view_dispose;
-    object_class->constructed = toff_calendar_view_constructed;
 
     gtk_widget_class_set_template_from_resource(
         GTK_WIDGET_CLASS(klass),
@@ -187,6 +182,21 @@ static void toff_calendar_view_class_init(ToffCalendarViewClass *klass) {
 
 static void toff_calendar_view_init(ToffCalendarView *self) {
     gtk_widget_init_template(GTK_WIDGET(self));
+
+    //Setting current time info
+    time_t time_now = time(NULL);
+    struct tm *current_time = localtime(&time_now);
+
+    self->month = current_time->tm_mon + 1;
+    self->year = current_time->tm_year + 1900;
+
+    gtk_drop_down_set_selected(GTK_DROP_DOWN(self->month_selector), self->month - 1);
+    gtk_spin_button_set_value(GTK_SPIN_BUTTON(self->year_selector), self->year);
+
+    g_signal_connect(self->month_selector, "notify::selected-item", G_CALLBACK(handle_month_change), self);
+    g_signal_connect(self->year_selector, "value-changed", G_CALLBACK(handle_year_change), self);
+
+    populate_calendar_grid(self);
 }
 
 GtkWidget* toff_calendar_view_new(void) {

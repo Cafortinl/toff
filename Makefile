@@ -29,4 +29,4 @@ clean:
 
 compile_resources:
 	@echo "Compiling resources...\n"
-	glib-compile-resources $(UI)/toff.gresource.xml --target=$(SRC)/toff-resources.c --sourcedir=$(UI) --generate-source
+	glib-compile-resources $(UI)/toff.gresource.xml --target=$(SRC)/toff_resources.c --sourcedir=$(UI) --generate-source

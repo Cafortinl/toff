@@ -38,25 +38,23 @@ struct _ToffCalendarDayCell {
 G_DEFINE_TYPE(ToffCalendarDayCell, toff_calendar_day_cell, GTK_TYPE_WIDGET)
 
 void toff_calendar_day_cell_update_events_box(ToffCalendarDayCell *self) {
+    GtkWidget *label;
     switch (self->event_type) {
         case DE_HOLIDAY:
         case DE_EVENT:
-            gtk_box_append(GTK_BOX(self->event_box), gtk_label_new(self->events.event_name));
+            label = gtk_label_new(self->events.event_name);
+            gtk_label_set_wrap(GTK_LABEL(label), TRUE);
+
+            gtk_box_append(GTK_BOX(self->event_box), label);
             break;
         case DE_VACATION:
             for (size_t i = 0; i < self->events.vacations.count; ++i) {
-                if (i < EVENT_BOX_MAX) {
-                    gtk_box_append(
-                        GTK_BOX(self->event_box),
-                        gtk_label_new(self->events.vacations.data[i].employee_name)
-                    );
-                } else {
-                    gtk_box_append(
-                        GTK_BOX(self->event_box),
-                        gtk_label_new("...")
-                    );
+                label = gtk_label_new(i < EVENT_BOX_MAX ? self->events.vacations.data[i].employee_name : "...");
+                gtk_label_set_wrap(GTK_LABEL(label), TRUE);
+                gtk_box_append(GTK_BOX(self->event_box), label);
+
+                if (i > EVENT_BOX_MAX)
                     break;
-                }
             }
             break;
         default:
@@ -69,18 +67,18 @@ void toff_calendar_day_cell_update_events_box(ToffCalendarDayCell *self) {
  *
  * For more info: https://docs.gtk.org/gobject/concepts.html#reference-counts-and-cycles
  */
-static void toff_calendar_day_cell_dispose(GObject *gobject) {
-    ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(gobject);
+static void toff_calendar_day_cell_dispose(GObject *object) {
+    ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(object);
 
     //Clearing the template children
     gtk_widget_dispose_template(GTK_WIDGET(self), TOFF_TYPE_CALENDAR_DAY_CELL);
 
     //Chaining up to parent's dispose implementation
-    G_OBJECT_CLASS(toff_calendar_day_cell_parent_class)->dispose(gobject);
+    G_OBJECT_CLASS(toff_calendar_day_cell_parent_class)->dispose(object);
 }
 
-static void toff_calendar_day_cell_finalize(GObject *gobject) {
-    ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(gobject);
+static void toff_calendar_day_cell_finalize(GObject *object) {
+    ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(object);
 
     switch (self->event_type) {
         case DE_HOLIDAY:
@@ -101,7 +99,7 @@ static void toff_calendar_day_cell_finalize(GObject *gobject) {
     g_clear_pointer(&self->date, g_date_time_unref);
 
     //Chaining up to parent's finalize implementation
-    G_OBJECT_CLASS(toff_calendar_day_cell_parent_class)->finalize(gobject);
+    G_OBJECT_CLASS(toff_calendar_day_cell_parent_class)->finalize(object);
 }
 
 /*
