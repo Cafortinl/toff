@@ -8,7 +8,7 @@
             <object class="GtkBox">
                 <property name="orientation">horizontal</property>
                 <property name="spacing">2</property>
-                <property name="hexpand">TRUE</property>
+                <property name="hexpand">true</property>
                 <property name="halign">end</property>
         
                 <!-- Month Chooser -->
@@ -52,11 +52,60 @@
             </object>
         </child>
         <child>
+            <object class="GtkBox" id="day_labels">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">2</property>
+                <property name="hexpand">true</property>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">MON</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">TUE</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">WED</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">THU</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">FRI</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">SAT</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">SUN</property>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child>
             <object class="GtkGrid" id="calendar_grid">
-                <property name="vexpand">TRUE</property>
-                <property name="hexpand">TRUE</property>
-                <property name="row_homogeneous">TRUE</property>
-                <property name="column_homogeneous">TRUE</property>
+                <property name="vexpand">true</property>
+                <property name="hexpand">true</property>
+                <property name="row_homogeneous">true</property>
+                <property name="column_homogeneous">true</property>
                 <property name="row_spacing">2</property>
                 <property name="column_spacing">2</property>
             </object>

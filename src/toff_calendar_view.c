@@ -30,8 +30,9 @@ G_DEFINE_TYPE(ToffCalendarView, toff_calendar_view, GTK_TYPE_BOX)
 
 void populate_calendar_grid(ToffCalendarView *self) {
     GtkWidget *child;
-    while ((child = gtk_widget_get_first_child(self->calendar_grid)))
+    while ((child = gtk_widget_get_first_child(self->calendar_grid))) {
         gtk_grid_remove(GTK_GRID(self->calendar_grid), child);
+    }
 
     sqlite_database_administrator *dba = sqlite_dba_connect_to_db("./test_db.sqlite");
     if (!dba) {
