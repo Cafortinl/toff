@@ -1,7 +1,11 @@
 #include "toff_calendar_view.h"
 
+#include <stdlib.h>
 #include <time.h>
 
+#include "glib-object.h"
+#include "glib.h"
+#include "glibconfig.h"
 #include "sqlite_database_administrator.h"
 #include "toff_calendar_day_cell.h"
 #include "toff_utilities.h"
@@ -40,6 +44,9 @@ void populate_calendar_grid(ToffCalendarView *self) {
         return;
     }
 
+    //Getting current date
+    time_t today = time(0);
+    
     //Generating date range
     date_range dates = generate_calendar_date_range(self->month, self->year);
     char start_date_str[11];
@@ -52,25 +59,40 @@ void populate_calendar_grid(ToffCalendarView *self) {
     result_information *events = get_events_in_date_range(dba, dates);
 
     struct tm date_iterator_builder = *(localtime(&dates.start_date));
+    date_iterator_builder.tm_hour = 0;
+    date_iterator_builder.tm_min = 0;
+    date_iterator_builder.tm_sec = 0;
     time_t date_iterator = mktime(&date_iterator_builder);
+
     int day_index = 0;
     while (date_iterator <= dates.end_date) {
+        gboolean is_weekend;
+        gint event_type;
         GtkWidget *current_day = toff_calendar_day_cell_new();
 
-        toff_calendar_day_cell_set_date(TOFF_CALENDAR_DAY_CELL(current_day), date_iterator);
-        toff_calendar_day_cell_set_is_weekend(
-            TOFF_CALENDAR_DAY_CELL(current_day),
-            localtime(&date_iterator)->tm_wday == 0 || localtime(&date_iterator)->tm_wday == 6
+        //TODO: fix is_today check (use struct tm)
+        g_object_set(
+            G_OBJECT(current_day),
+            "date",
+            date_iterator,
+            "is_weekend",
+            localtime(&date_iterator)->tm_wday == 0 || localtime(&date_iterator)->tm_wday == 6,
+            "is_today",
+            fabs(difftime(today, date_iterator)) < 86400 ? TRUE : FALSE,
+            NULL
         );
 
         for (size_t i = 0; i < events->size; ++i) {
             event current_event = ((event*) events->data)[i];
 
             if (IS_DATE_WITHIN_RANGE(date_iterator, current_event.dates)) {
-                toff_calendar_day_cell_add_event_information(
-                    TOFF_CALENDAR_DAY_CELL(current_day),
+                g_object_set(
+                    G_OBJECT(current_day),
+                    "event_type",
                     DE_EVENT,
-                    strdup(current_event.name)
+                    "event_name",
+                    current_event.name,
+                    NULL
                 );
                 goto can_have_vacations_check;
             }
@@ -80,40 +102,50 @@ void populate_calendar_grid(ToffCalendarView *self) {
             holiday current_holiday = ((holiday*) holidays->data)[i];
 
             if (IS_DATE_WITHIN_RANGE(date_iterator, current_holiday.dates)) {
-                toff_calendar_day_cell_add_event_information(
-                    TOFF_CALENDAR_DAY_CELL(current_day),
+                g_object_set(
+                    G_OBJECT(current_day),
+                    "event_type",
                     DE_HOLIDAY,
-                    strdup(current_holiday.name)
+                    "event_name",
+                    current_holiday.name,
+                    NULL
                 );
                 goto can_have_vacations_check;
             }
         }
 
 can_have_vacations_check:
-        if (
-            toff_calendar_day_cell_is_weekend(TOFF_CALENDAR_DAY_CELL(current_day))
-            || toff_calendar_day_cell_get_event_type(TOFF_CALENDAR_DAY_CELL(current_day)) == DE_EVENT
-            || toff_calendar_day_cell_get_event_type(TOFF_CALENDAR_DAY_CELL(current_day)) == DE_HOLIDAY
-        ) {
-            goto end;
-        }
+        g_object_get(
+            G_OBJECT(current_day),
+            "is_weekend", &is_weekend,
+            "event_type", &event_type,
+            NULL
+        );
 
+        if (is_weekend || event_type == DE_EVENT || event_type == DE_HOLIDAY)
+            goto end;
         
-        result_information *vacations = get_vacations_in_date(
+        result_information *vacations_result = get_vacations_in_date(
             dba, 
             date_iterator
         );
 
-        if (vacations) {
-            toff_calendar_day_cell_add_vacations(
-                TOFF_CALENDAR_DAY_CELL(current_day),
-                vacations->data,
-                vacations->size,
-                vacations->size
-            );
+        if (vacations_result) {
+            GArray *vacations = g_array_new(FALSE, FALSE, sizeof(vacation));
+            g_array_insert_vals(vacations, 0, vacations_result->data, vacations_result->size);
+
+            //Creating the GValue to set the vacations property
+            GValue vacations_value = G_VALUE_INIT;
+            g_value_init(&vacations_value, G_TYPE_ARRAY);
+            g_value_set_boxed(&vacations_value, vacations);
+
+            g_object_set_property(G_OBJECT(current_day), "vacations", &vacations_value);
+
+            g_value_unset(&vacations_value);
+            g_array_unref(vacations);
         }
 
-        result_information_free(vacations, vacation_result_extra_processing);
+        result_information_free(vacations_result, vacation_result_extra_processing);
 
 end:
         gtk_grid_attach(
