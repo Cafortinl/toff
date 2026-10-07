@@ -1,0 +1,22 @@
+calendar-day-cell {
+    padding: 4px;
+    border: 1px solid alpha(currentColor, 0.15);
+    border-radius: 6px;
+}
+
+calendar-day-cell:hover {
+    background-color: alpha(currentColor, 0.08);
+}
+
+calendar-day-cell.today {
+    border-color: @accent_bg_color;
+    border-width: 2px;
+}
+
+calendar-day-cell.outside-month {
+    opacity: 0.4;
+}
+
+calendar-day-cell.weekend label {
+    font-style: italic;
+}

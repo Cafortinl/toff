@@ -4,6 +4,18 @@
 #include "toff_calendar_day_cell.h"
 #include "toff_calendar_view.h"
 
+static void load_css(void) {
+    GtkCssProvider *provider = gtk_css_provider_new();
+    gtk_css_provider_load_from_resource(GTK_CSS_PROVIDER(provider), "/org/loveless/toff/style.css");
+
+    gtk_style_context_add_provider_for_display(
+        gdk_display_get_default(),
+        GTK_STYLE_PROVIDER(provider),
+        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION
+    );
+    g_object_unref(provider);
+}
+
 static void app_activate(GApplication *app) {
     GtkBuilder *builder;
     GtkWidget *app_window;
@@ -18,6 +30,7 @@ static void app_activate(GApplication *app) {
 
     gtk_window_present(GTK_WINDOW(app_window));
     g_object_unref(builder);
+    load_css();
 }
 
 int main(int argc, char **argv) {

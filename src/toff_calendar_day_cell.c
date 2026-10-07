@@ -62,7 +62,9 @@ void handle_click_gesture(
     gpointer user_data
 ) {
     ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(user_data);
-    g_signal_emit(self, obj_signals[SIG_DATE_SELECTED], 0);
+
+    if (n_press == 2)
+        g_signal_emit(self, obj_signals[SIG_DATE_SELECTED], 0);
 }
 
 void handle_date_selected(GObject *object, gpointer user_data) {
@@ -144,14 +146,29 @@ static void toff_calendar_day_cell_set_property (
     switch ((ToffCalendarDayCellProperty) property_id) {
         case PROP_IS_TODAY:
             self->is_today = g_value_get_boolean(value);
+            
+            if (self->is_today)
+                gtk_widget_add_css_class(GTK_WIDGET(self), "today");
+            else
+                gtk_widget_remove_css_class(GTK_WIDGET(self), "today");
             break;
 
         case PROP_IN_MONTH:
             self->in_month = g_value_get_boolean(value);
+
+            if (self->in_month)
+                gtk_widget_remove_css_class(GTK_WIDGET(self), "outside-month");
+            else
+                gtk_widget_add_css_class(GTK_WIDGET(self), "outside-month");
             break;
 
         case PROP_IS_WEEKEND:
             self->is_weekend = g_value_get_boolean(value);
+
+            if (self->is_weekend)
+                gtk_widget_add_css_class(GTK_WIDGET(self), "weekend");
+            else
+                gtk_widget_remove_css_class(GTK_WIDGET(self), "weekend");
             break;
 
         case PROP_EVENT_TYPE:
@@ -367,6 +384,8 @@ static void toff_calendar_day_cell_class_init(ToffCalendarDayCellClass *klass) {
     gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarDayCell, main_box);
     gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarDayCell, day_label);
     gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarDayCell, event_box);
+
+    gtk_widget_class_set_css_name(widget_class, "calendar-day-cell");
 }
 
 /*

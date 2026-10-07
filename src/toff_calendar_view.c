@@ -45,7 +45,8 @@ void populate_calendar_grid(ToffCalendarView *self) {
     }
 
     //Getting current date
-    time_t today = time(0);
+    time_t time_now = time(0);
+    struct tm today = *(localtime(&time_now));
     
     //Generating date range
     date_range dates = generate_calendar_date_range(self->month, self->year);
@@ -59,9 +60,6 @@ void populate_calendar_grid(ToffCalendarView *self) {
     result_information *events = get_events_in_date_range(dba, dates);
 
     struct tm date_iterator_builder = *(localtime(&dates.start_date));
-    date_iterator_builder.tm_hour = 0;
-    date_iterator_builder.tm_min = 0;
-    date_iterator_builder.tm_sec = 0;
     time_t date_iterator = mktime(&date_iterator_builder);
 
     int day_index = 0;
@@ -70,7 +68,6 @@ void populate_calendar_grid(ToffCalendarView *self) {
         gint event_type;
         GtkWidget *current_day = toff_calendar_day_cell_new();
 
-        //TODO: fix is_today check (use struct tm)
         g_object_set(
             G_OBJECT(current_day),
             "date",
@@ -78,7 +75,9 @@ void populate_calendar_grid(ToffCalendarView *self) {
             "is_weekend",
             localtime(&date_iterator)->tm_wday == 0 || localtime(&date_iterator)->tm_wday == 6,
             "is_today",
-            fabs(difftime(today, date_iterator)) < 86400 ? TRUE : FALSE,
+            today.tm_year == date_iterator_builder.tm_year && today.tm_mon == date_iterator_builder.tm_mon && today.tm_mday == date_iterator_builder.tm_mday,
+            "in_month",
+            date_iterator_builder.tm_mon == (self->month - 1),
             NULL
         );
 
