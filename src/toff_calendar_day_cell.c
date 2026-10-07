@@ -35,6 +35,13 @@ struct _ToffCalendarDayCell {
 G_DEFINE_TYPE(ToffCalendarDayCell, toff_calendar_day_cell, GTK_TYPE_WIDGET)
 
 typedef enum {
+    SIG_DATE_SELECTED = 1,
+    N_SIGNALS
+} ToffCalendarDayCellSignal;
+
+static guint obj_signals[N_SIGNALS] = {0, };
+
+typedef enum {
     PROP_IS_TODAY = 1,
     PROP_IN_MONTH,
     PROP_IS_WEEKEND,
@@ -46,6 +53,31 @@ typedef enum {
 } ToffCalendarDayCellProperty;
 
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
+
+void handle_click_gesture(
+    GtkGestureClick *gesture,
+    int n_press,
+    double x,
+    double y,
+    gpointer user_data
+) {
+    ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(user_data);
+    g_signal_emit(self, obj_signals[SIG_DATE_SELECTED], 0);
+}
+
+void handle_date_selected(GObject *object, gpointer user_data) {
+    ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(object);
+
+    if (!self->date)
+        return;
+
+    g_print(
+        "%d-%d-%d clicked!\n",
+        g_date_time_get_year(self->date),
+        g_date_time_get_month(self->date),
+        g_date_time_get_day_of_month(self->date)
+    );
+}
 
 void cleanup_events(ToffCalendarDayCell *self) {
     switch ((enum day_event_types) self->event_type) {
@@ -92,7 +124,7 @@ void update_events_box(ToffCalendarDayCell *self) {
                 gtk_label_set_wrap(GTK_LABEL(label), TRUE);
                 gtk_box_append(GTK_BOX(self->event_box), label);
 
-                if (i > EVENT_BOX_MAX)
+                if (i >= EVENT_BOX_MAX)
                     break;
             }
             break;
@@ -123,6 +155,7 @@ static void toff_calendar_day_cell_set_property (
             break;
 
         case PROP_EVENT_TYPE:
+            cleanup_events(self);
             self->event_type = (enum day_event_types) g_value_get_int(value);
             break;
 
@@ -140,6 +173,7 @@ static void toff_calendar_day_cell_set_property (
             break;
 
         case PROP_DATE:
+            g_clear_pointer(&self->date, g_date_time_unref);
             self->date = g_date_time_new_from_unix_utc(g_value_get_int64(value));
             update_day_label(self);
             break;
@@ -230,9 +264,12 @@ static void toff_calendar_day_cell_class_init(ToffCalendarDayCellClass *klass) {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
     GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 
+    //Section: Method Overrides
     object_class->dispose = toff_calendar_day_cell_dispose;
     object_class->finalize = toff_calendar_day_cell_finalize;
+    //EndSection: Method Overrides
 
+    //Section: Object Properties
     object_class->set_property = toff_calendar_day_cell_set_property;
     object_class->get_property = toff_calendar_day_cell_get_property;
 
@@ -304,6 +341,22 @@ static void toff_calendar_day_cell_class_init(ToffCalendarDayCellClass *klass) {
         );
 
     g_object_class_install_properties(object_class, N_PROPERTIES, obj_properties);
+    //EndSection: Object Properties
+
+    //Section: Object Signals
+    obj_signals[SIG_DATE_SELECTED] = 
+        g_signal_new(
+            "date-selected",
+            TOFF_TYPE_CALENDAR_DAY_CELL,
+            G_SIGNAL_RUN_LAST | G_SIGNAL_NO_RECURSE | G_SIGNAL_NO_HOOKS,
+            0,
+            NULL,
+            NULL,
+            NULL,
+            G_TYPE_NONE,
+            0
+        );
+    //EndSection: Object Signals
 
     gtk_widget_class_set_template_from_resource(
         GTK_WIDGET_CLASS(klass),
@@ -321,6 +374,15 @@ static void toff_calendar_day_cell_class_init(ToffCalendarDayCellClass *klass) {
  */
 static void toff_calendar_day_cell_init(ToffCalendarDayCell *self) {
     gtk_widget_init_template(GTK_WIDGET(self));
+
+    //Section: Event controllers
+    GtkGesture *click_gesture;
+    click_gesture = gtk_gesture_click_new();
+    g_signal_connect(click_gesture, "pressed", G_CALLBACK(handle_click_gesture), self);
+    gtk_widget_add_controller(GTK_WIDGET(self), GTK_EVENT_CONTROLLER(click_gesture));
+    //EndSection: Event controllers
+
+    g_signal_connect(self, "date-selected", G_CALLBACK(handle_date_selected), NULL);
 }
 
 GtkWidget* toff_calendar_day_cell_new(void) {
