@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="ToffDayDetailView" parent="GtkWindow">
+        <property name="modal">true</property>
+        <property name="destroy-with-parent">true</property>
+        <property name="title" translatable="yes">Day Information</property>
+
+        <child>
+            <object class="GtkShortcutController">
+                <property name="scope">local</property>
+
+                <child>
+                    <object class="GtkShortcut">
+                        <property name="trigger">Escape</property>
+                        <property name="action">action(window.close)</property>
+                    </object>
+                </child>
+            </object>
+        </child>
+
+        <child>
+            <object class="GtkBox">
+                <property name="orientation">vertical</property>
+                <property name="spacing">5</property>
+
+                <child>
+                    <object class="GtkLabel" id="day_label">
+                    </object>
+                </child>
+
+                <child>
+                    <object class="GtkBox">
+                        <property name="orientation">horizontal</property>
+                        <property name="spacing">5</property>
+                        <property name="hexpand">true</property>
+
+                        <child>
+                            <object class="GtkLabel" id="event_type_tag">
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="GtkLabel" id="event_name">
+                                <property name="justify">right</property>
+                            </object>
+                        </child>
+                    </object>
+                </child>
+
+                <child>
+                    <object class="GtkListBox" id="vacation_list">
+                    </object>
+                </child>
+
+            </object>
+        </child>
+    </template>
+</interface>

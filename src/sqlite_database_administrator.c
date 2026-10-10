@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-char* operation_to_string(enum QUERY_FILTER_OPERATIONS operation) {
+char* operation_to_string(enum query_filter_operations operation) {
     switch (operation) {
         case QF_NOT:
             return (char*) "NOT";
@@ -31,7 +31,7 @@ char* operation_to_string(enum QUERY_FILTER_OPERATIONS operation) {
     }
 }
 
-char* data_type_to_string(enum SQLITE_DATA_TYPES data_type) {
+char* data_type_to_string(enum sqlite_data_types data_type) {
     switch (data_type) {
         case SQLITE_DBA_INTEGER:
             return (char*) "INTEGER";
@@ -62,8 +62,10 @@ char* data_type_to_string(enum SQLITE_DATA_TYPES data_type) {
 void query_filter_to_string_builder(
     const query_filter_node *filters,
     sqlite3_str *str_builder,
-    enum QUERY_FILTER_STATES state
+    enum query_filter_states state
 ){
+    //TODO: Consider creating a function to evaluate if the operation needs
+    //parentheses or not.
     if (state == QF_STATE_INIT || state == QF_STATE_FINAL)
         state = QF_STATE_LEVAL;
 
@@ -81,9 +83,9 @@ void query_filter_to_string_builder(
                 state = QF_STATE_LPRINT;
                 break;
             case QF_NODE:
-                sqlite3_str_appendf(str_builder, " (");
+                sqlite3_str_appendf(str_builder, filters->operation != QF_BETWEEN ? " (" : "");
                 query_filter_to_string_builder(filters->left.node, str_builder, state);
-                sqlite3_str_appendf(str_builder, " )");
+                sqlite3_str_appendf(str_builder, filters->operation != QF_BETWEEN ? " )" : "");
                 state = QF_STATE_OPRINT;
                 break;
         }
@@ -103,9 +105,9 @@ void query_filter_to_string_builder(
         switch (right_type) {
             case QF_NODE:
                 state = QF_STATE_LEVAL;
-                sqlite3_str_appendf(str_builder, " (");
+                sqlite3_str_appendf(str_builder, filters->operation != QF_BETWEEN ? " (" : "");
                 query_filter_to_string_builder(filters->right.node, str_builder, state);
-                sqlite3_str_appendf(str_builder, " )");
+                sqlite3_str_appendf(str_builder, filters->operation != QF_BETWEEN ? " )" : "");
                 state = QF_STATE_FINAL;
                 break;
             case QF_TEXT:
@@ -327,7 +329,7 @@ query_result* sqlite_dba_execute_statement(sqlite_database_administrator* dba) {
 
                 //SQLite Fundamental Datatypes = enum SQLITE_DATA_TYPES - 1
                 //https://sqlite.org/c3ref/c_blob.html
-                results->columns[index].value.type = (enum SQLITE_DATA_TYPES) (sqlite3_column_type(dba->statement, i) - 1);
+                results->columns[index].value.type = (enum sqlite_data_types) (sqlite3_column_type(dba->statement, i) - 1);
 
                 results->columns[index].column_name = strdup((char*) sqlite3_column_name(dba->statement, i));
 

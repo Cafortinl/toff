@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+    <template class="ToffCalendarView" parent="GtkBox">
+        <property name="orientation">vertical</property>
+        <property name="spacing">2</property>
+        <child>
+            <!-- Calendar Controls -->
+            <object class="GtkBox">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">2</property>
+                <property name="hexpand">true</property>
+                <property name="halign">end</property>
+        
+                <!-- Month Chooser -->
+                <child>
+                    <object class="GtkDropDown" id="month_selector">
+                        <property name="halign">end</property>
+                        <property name="model">
+                            <object class="GtkStringList">
+                                <items>
+                                    <item translatable="yes">January</item>
+                                    <item translatable="yes">February</item>
+                                    <item translatable="yes">March</item>
+                                    <item translatable="yes">April</item>
+                                    <item translatable="yes">May</item>
+                                    <item translatable="yes">June</item>
+                                    <item translatable="yes">July</item>
+                                    <item translatable="yes">August</item>
+                                    <item translatable="yes">September</item>
+                                    <item translatable="yes">October</item>
+                                    <item translatable="yes">November</item>
+                                    <item translatable="yes">December</item>
+                                </items>
+                            </object>
+                        </property>
+                    </object>
+                </child>
+        
+                <!-- Year Chooser -->
+                <child>
+                    <object class="GtkSpinButton" id="year_selector">
+                        <property name="halign">end</property>
+                        <property name="adjustment">
+                            <object class="GtkAdjustment">
+                                <property name="lower">2000</property>
+                                <property name="upper">2100</property>
+                                <property name="step-increment">1</property>
+                            </object>
+                        </property>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child>
+            <object class="GtkBox" id="day_labels">
+                <property name="orientation">horizontal</property>
+                <property name="spacing">2</property>
+                <property name="hexpand">true</property>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">MON</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">TUE</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">WED</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">THU</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">FRI</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">SAT</property>
+                    </object>
+                </child>
+                <child>
+                    <object class="GtkLabel">
+                        <property name="hexpand">true</property>
+                        <property name="label">SUN</property>
+                    </object>
+                </child>
+            </object>
+        </child>
+        <child>
+            <object class="GtkGrid" id="calendar_grid">
+                <property name="vexpand">true</property>
+                <property name="hexpand">true</property>
+                <property name="row_homogeneous">true</property>
+                <property name="column_homogeneous">true</property>
+                <property name="row_spacing">2</property>
+                <property name="column_spacing">2</property>
+            </object>
+        </child>
+    </template>
+</interface>
