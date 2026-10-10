@@ -8,11 +8,16 @@ typedef struct {
     time_t end_date;
 } date_range;
 
-#define IS_DATE_RANGE_VALID(x) \
-    (difftime((x).end_date, (x).start_date) > 0)
+#define SECS_IN_DAY 86400
 
-#define IS_DATE_RANGE_VALID_INCLUSIVE(x) \
-    (difftime((x).end_date, (x).start_date) >= 0)
+#define DIFFTIME_IN_DAYS(end_date, start_date) \
+    ((int)(difftime((end_date), (start_date)) / SECS_IN_DAY))
+
+#define IS_DATE_RANGE_VALID(range) \
+    (difftime((range).end_date, (range).start_date) > 0)
+
+#define IS_DATE_RANGE_VALID_INCLUSIVE(range) \
+    (difftime((range).end_date, (range).start_date) >= 0)
 
 #define IS_DATE_WITHIN_RANGE(date, range)     \
     (difftime((date),(range).start_date) >= 0 \

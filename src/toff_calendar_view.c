@@ -32,7 +32,12 @@ struct _ToffCalendarView {
  */
 G_DEFINE_TYPE(ToffCalendarView, toff_calendar_view, GTK_TYPE_BOX)
 
-void populate_calendar_grid(ToffCalendarView *self) {
+static void vacation_clear(gpointer data) {
+    vacation *v = data;
+    g_clear_pointer(&v->employee_name, g_free);
+}
+
+static void populate_calendar_grid(ToffCalendarView *self) {
     GtkWidget *child;
     while ((child = gtk_widget_get_first_child(self->calendar_grid))) {
         gtk_grid_remove(GTK_GRID(self->calendar_grid), child);
@@ -130,8 +135,14 @@ can_have_vacations_check:
         );
 
         if (vacations_result) {
-            GArray *vacations = g_array_new(FALSE, FALSE, sizeof(vacation));
-            g_array_insert_vals(vacations, 0, vacations_result->data, vacations_result->size);
+            GArray *vacations = g_array_sized_new(FALSE, FALSE, sizeof(vacation), vacations_result->size);
+            g_array_set_clear_func(vacations, vacation_clear);
+
+            for (size_t i = 0; i < vacations_result->size; ++i) {
+                vacation v = ((vacation*) vacations_result->data)[i];
+                v.employee_name = g_strdup(v.employee_name);
+                g_array_append_val(vacations, v);
+            }
 
             //Creating the GValue to set the vacations property
             GValue vacations_value = G_VALUE_INIT;
@@ -199,6 +210,7 @@ static void toff_calendar_view_dispose(GObject *object) {
 
 static void toff_calendar_view_class_init(ToffCalendarViewClass *klass) {
     GObjectClass *object_class = G_OBJECT_CLASS(klass);
+    GtkWidgetClass *widget_class = GTK_WIDGET_CLASS(klass);
 
     object_class->dispose = toff_calendar_view_dispose;
 
@@ -207,9 +219,9 @@ static void toff_calendar_view_class_init(ToffCalendarViewClass *klass) {
         "/org/loveless/toff/toff_calendar_view.ui"
     );
 
-    gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarView, month_selector);
-    gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarView, year_selector);
-    gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarView, calendar_grid);
+    gtk_widget_class_bind_template_child(widget_class, ToffCalendarView, month_selector);
+    gtk_widget_class_bind_template_child(widget_class, ToffCalendarView, year_selector);
+    gtk_widget_class_bind_template_child(widget_class, ToffCalendarView, calendar_grid);
 }
 
 static void toff_calendar_view_init(ToffCalendarView *self) {

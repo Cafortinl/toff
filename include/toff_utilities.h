@@ -14,6 +14,14 @@
 #include "sqlite_database_administrator.h"
 #include "vacation.h"
 
+enum day_event_types {
+    DE_NONE,
+    DE_HOLIDAY,
+    DE_EVENT,
+    DE_VACATION,
+    DE_TYPES_COUNT
+};
+
 // Section: Data Containers
 /**
  * Stores `query_result` information in a specific data type.

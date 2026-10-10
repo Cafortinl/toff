@@ -5,14 +5,6 @@
 
 #include "toff_utilities.h"
 
-enum day_event_types {
-    DE_NONE,
-    DE_HOLIDAY,
-    DE_EVENT,
-    DE_VACATION,
-    DE_TYPES_COUNT
-};
-
 G_BEGIN_DECLS
 
 /*

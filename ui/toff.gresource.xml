@@ -3,6 +3,7 @@
     <gresource prefix="/org/loveless/toff">
         <file preprocess="xml-stripblanks">toff_calendar_day_cell.ui</file>
         <file preprocess="xml-stripblanks">toff_calendar_view.ui</file>
+        <file preprocess="xml-stripblanks">toff_day_detail_view.ui</file>
         <file preprocess="xml-stripblanks">toff_main_screen.ui</file>
         <file compressed="true">style.css</file>
     </gresource>

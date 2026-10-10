@@ -1,6 +1,6 @@
 #include "toff_calendar_day_cell.h"
 #include "glib-object.h"
-#include "glib.h"
+#include "toff_day_detail_view.h"
 #include "gtk/gtk.h"
 #include <stdio.h>
 #include <string.h>
@@ -35,11 +35,11 @@ struct _ToffCalendarDayCell {
 G_DEFINE_TYPE(ToffCalendarDayCell, toff_calendar_day_cell, GTK_TYPE_WIDGET)
 
 typedef enum {
-    SIG_DATE_SELECTED = 1,
+    SIG_DATE_SELECTED,
     N_SIGNALS
 } ToffCalendarDayCellSignal;
 
-static guint obj_signals[N_SIGNALS] = {0, };
+static guint obj_signals[N_SIGNALS];
 
 typedef enum {
     PROP_IS_TODAY = 1,
@@ -54,7 +54,7 @@ typedef enum {
 
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
-void handle_click_gesture(
+static void handle_click_gesture(
     GtkGestureClick *gesture,
     int n_press,
     double x,
@@ -67,21 +67,46 @@ void handle_click_gesture(
         g_signal_emit(self, obj_signals[SIG_DATE_SELECTED], 0);
 }
 
-void handle_date_selected(GObject *object, gpointer user_data) {
+static void handle_date_selected(GObject *object, gpointer user_data) {
     ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(object);
 
     if (!self->date)
         return;
 
-    g_print(
-        "%d-%d-%d clicked!\n",
-        g_date_time_get_year(self->date),
-        g_date_time_get_month(self->date),
-        g_date_time_get_day_of_month(self->date)
+    GtkWidget* detail_view = toff_day_detail_view_new(GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(self))));
+    g_object_set(
+        G_OBJECT(detail_view),
+        "date",
+        g_date_time_to_unix(self->date),
+        "event_type",
+        self->event_type,
+        NULL
     );
+    
+    GValue prop_to_set = G_VALUE_INIT;
+    switch ((enum day_event_types) self->event_type) {
+        case DE_EVENT:
+        case DE_HOLIDAY:
+            g_value_init(&prop_to_set, G_TYPE_STRING);
+            g_value_set_string(&prop_to_set, self->events.event_name);
+            g_object_set_property(G_OBJECT(detail_view), "event_name", &prop_to_set);
+            break;
+
+        case DE_VACATION:
+            g_value_init(&prop_to_set, G_TYPE_ARRAY);
+            g_value_set_boxed(&prop_to_set, self->events.vacations);
+            g_object_set_property(G_OBJECT(detail_view), "vacations", &prop_to_set);
+            break;
+
+        default:
+            break;
+    }
+    g_value_unset(&prop_to_set);
+
+    gtk_window_present(GTK_WINDOW(detail_view));
 }
 
-void cleanup_events(ToffCalendarDayCell *self) {
+static void cleanup_events(ToffCalendarDayCell *self, bool clear_event_type) {
     switch ((enum day_event_types) self->event_type) {
         case DE_HOLIDAY:
         case DE_EVENT:
@@ -96,16 +121,17 @@ void cleanup_events(ToffCalendarDayCell *self) {
             break;
     }
     
-    self->event_type = DE_NONE;
+    if (clear_event_type)
+        self->event_type = DE_NONE;
 }
 
-void update_day_label(ToffCalendarDayCell *self) {
+static void update_day_label(ToffCalendarDayCell *self) {
     char day_str[3];
     snprintf(day_str, 3, "%d", (int) g_date_time_get_day_of_month(self->date));
     gtk_label_set_text(GTK_LABEL(self->day_label), day_str);
 }
 
-void update_events_box(ToffCalendarDayCell *self) {
+static void update_events_box(ToffCalendarDayCell *self) {
     GtkWidget *label;
     switch (self->event_type) {
         case DE_HOLIDAY:
@@ -172,18 +198,18 @@ static void toff_calendar_day_cell_set_property (
             break;
 
         case PROP_EVENT_TYPE:
-            cleanup_events(self);
+            cleanup_events(self, true);
             self->event_type = (enum day_event_types) g_value_get_int(value);
             break;
 
         case PROP_EVENT_NAME:
-            cleanup_events(self);
+            cleanup_events(self, false);
             self->events.event_name = g_value_dup_string(value);
             update_events_box(self);
             break;
 
         case PROP_VACATIONS:
-            cleanup_events(self);
+            cleanup_events(self, true);
             self->events.vacations = g_value_dup_boxed(value);
             self->event_type = DE_VACATION;
             update_events_box(self);
@@ -262,7 +288,7 @@ static void toff_calendar_day_cell_dispose(GObject *object) {
 static void toff_calendar_day_cell_finalize(GObject *object) {
     ToffCalendarDayCell *self = TOFF_CALENDAR_DAY_CELL(object);
 
-    cleanup_events(self);
+    cleanup_events(self, true);
     g_clear_pointer(&self->date, g_date_time_unref);
 
     //Chaining up to parent's finalize implementation
@@ -376,14 +402,14 @@ static void toff_calendar_day_cell_class_init(ToffCalendarDayCellClass *klass) {
     //EndSection: Object Signals
 
     gtk_widget_class_set_template_from_resource(
-        GTK_WIDGET_CLASS(klass),
+        widget_class,
         "/org/loveless/toff/toff_calendar_day_cell.ui"
     );
     gtk_widget_class_set_layout_manager_type(widget_class, GTK_TYPE_BIN_LAYOUT);
 
-    gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarDayCell, main_box);
-    gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarDayCell, day_label);
-    gtk_widget_class_bind_template_child(GTK_WIDGET_CLASS(klass), ToffCalendarDayCell, event_box);
+    gtk_widget_class_bind_template_child(widget_class, ToffCalendarDayCell, main_box);
+    gtk_widget_class_bind_template_child(widget_class, ToffCalendarDayCell, day_label);
+    gtk_widget_class_bind_template_child(widget_class, ToffCalendarDayCell, event_box);
 
     gtk_widget_class_set_css_name(widget_class, "calendar-day-cell");
 }
