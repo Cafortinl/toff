@@ -173,10 +173,13 @@ static void toff_calendar_day_cell_set_property (
         case PROP_IS_TODAY:
             self->is_today = g_value_get_boolean(value);
             
-            if (self->is_today)
+            if (self->is_today) {
                 gtk_widget_add_css_class(GTK_WIDGET(self), "today");
-            else
+                gtk_widget_add_css_class(GTK_WIDGET(self->day_label), "pill");
+                gtk_widget_add_css_class(GTK_WIDGET(self->day_label), "pill-blue");
+            } else {
                 gtk_widget_remove_css_class(GTK_WIDGET(self), "today");
+            }
             break;
 
         case PROP_IN_MONTH:

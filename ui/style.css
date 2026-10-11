@@ -1,15 +1,63 @@
+/* ==========================================================================
+   Colors
+   ========================================================================== */
+
+@define-color today_border #3584e4;
+
+
+/* ==========================================================================
+   Pill (generic rounded badge)
+   ========================================================================== */
+
+/* Shape and typography. Combine with a color class below. */
+.pill {
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-weight: bold;
+    font-size: 0.85em;
+}
+
+/* Blue */
+.pill.pill-blue {
+    background-color: rgba(53, 132, 228, 0.18);
+    color: #1c71d8;
+}
+
+/* Green */
+.pill.pill-green {
+    background-color: rgba(51, 209, 122, 0.20);
+    color: #1b8a4a;
+}
+
+.pill.pill-red {
+    background-color: rgba(224, 27, 36, 0.18);
+    color: #a51d2d;
+}
+
+/* Dark-mode overrides (lighter text for contrast) */
+.dark .pill.pill-blue  { color: #99c1f1; }
+.dark .pill.pill-green { color: #8ff0a4; }
+.dark .pill.pill-red { color: #f66151; }
+
+
+/* ==========================================================================
+   Calendar: day cell
+   ========================================================================== */
+
 calendar-day-cell {
     padding: 4px;
     border: 1px solid alpha(currentColor, 0.15);
     border-radius: 6px;
 }
 
+/* States */
 calendar-day-cell:hover {
     background-color: alpha(currentColor, 0.08);
 }
 
+/* Variants */
 calendar-day-cell.today {
-    border-color: @accent_bg_color;
+    border-color: @today_border;
     border-width: 2px;
 }
 
@@ -19,4 +67,34 @@ calendar-day-cell.outside-month {
 
 calendar-day-cell.weekend label {
     font-style: italic;
+}
+
+
+/* ==========================================================================
+   Day detail window
+   ========================================================================== */
+
+/* Headings */
+.day-title {
+    font-size: 1.6em;
+    font-weight: bold;
+}
+
+.section-heading {
+    font-weight: bold;
+    opacity: 0.7;
+}
+
+/* Vacation list (card-style list with separators) */
+.vacation-list {
+    border: 1px solid alpha(currentColor, 0.15);
+    border-radius: 8px;
+}
+
+.vacation-list row {
+    padding: 8px 12px;
+}
+
+.vacation-list row:not(:last-child) {
+    border-bottom: 1px solid alpha(currentColor, 0.1);
 }

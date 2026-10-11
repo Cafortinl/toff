@@ -4,11 +4,12 @@
         <property name="modal">true</property>
         <property name="destroy-with-parent">true</property>
         <property name="title" translatable="yes">Day Information</property>
+        <property name="default-width">380</property>
+        <property name="resizable">false</property>
 
         <child>
             <object class="GtkShortcutController">
                 <property name="scope">local</property>
-
                 <child>
                     <object class="GtkShortcut">
                         <property name="trigger">Escape</property>
@@ -21,34 +22,81 @@
         <child>
             <object class="GtkBox">
                 <property name="orientation">vertical</property>
-                <property name="spacing">5</property>
+                <property name="spacing">18</property>
+                <property name="margin-top">24</property>
+                <property name="margin-bottom">24</property>
+                <property name="margin-start">24</property>
+                <property name="margin-end">24</property>
 
+                <!-- Event Information -->
                 <child>
-                    <object class="GtkLabel" id="day_label">
-                    </object>
-                </child>
-
-                <child>
-                    <object class="GtkBox">
-                        <property name="orientation">horizontal</property>
+                    <object class="GtkBox" id="event_information">
+                        <property name="orientation">vertical</property>
                         <property name="spacing">5</property>
-                        <property name="hexpand">true</property>
-
+                        <property name="visible">false</property>
                         <child>
-                            <object class="GtkLabel" id="event_type_tag">
+                            <object class="GtkLabel" id="day_label">
+                                <property name="halign">center</property>
+                                <property name="wrap">true</property>
+                                <style>
+                                    <class name="day-title"/>
+                                </style>
                             </object>
                         </child>
 
                         <child>
-                            <object class="GtkLabel" id="event_name">
-                                <property name="justify">right</property>
+                            <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">5</property>
+                                <child>
+                                    <object class="GtkLabel" id="event_type_tag">
+                                        <style>
+                                            <class name="pill"/>
+                                        </style>
+                                    </object>
+                                </child>
+                                <child>
+                                    <object class="GtkLabel" id="event_name">
+                                    </object>
+                                </child>
                             </object>
                         </child>
                     </object>
                 </child>
 
+                <!-- Vacation Information -->
                 <child>
-                    <object class="GtkListBox" id="vacation_list">
+                    <object class="GtkBox" id="vacation_information">
+                        <property name="orientation">vertical</property>
+                        <property name="spacing">5</property>
+                        <property name="visible">false</property>
+                        <child>
+                            <object class="GtkLabel">
+                                <property name="label" translatable="yes">Vacations</property>
+                                <property name="halign">start</property>
+                                <style>
+                                    <class name="section-heading"/>
+                                </style>
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="GtkScrolledWindow">
+                                <property name="vexpand">true</property>
+                                <property name="hscrollbar-policy">never</property>
+                                <property name="min-content-height">100</property>
+                                <property name="max-content-height">300</property>
+                                <property name="propagate-natural-height">true</property>
+                                <child>
+                                    <object class="GtkListBox" id="vacation_list">
+                                        <property name="selection-mode">none</property>
+                                        <style>
+                                            <class name="vacation-list"/>
+                                        </style>
+                                    </object>
+                                </child>
+                            </object>
+                        </child>
                     </object>
                 </child>
 

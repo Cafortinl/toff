@@ -9,9 +9,11 @@
 struct _ToffDayDetailView {
     GtkWidget parent;
 
+    GtkWidget *event_information;
     GtkWidget *day_label;
     GtkWidget *event_type_tag;
     GtkWidget *event_name;
+    GtkWidget *vacation_information;
     GtkWidget *vacation_list;
 
     enum day_event_types event_type;
@@ -35,29 +37,28 @@ typedef enum {
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void update_event_information(ToffDayDetailView *self) {
+    if (!self->event_name)
+        return;
+
     switch ((enum day_event_types) self->event_type) {
         case DE_EVENT:
             gtk_label_set_text(GTK_LABEL(self->event_type_tag), "Event");
-            gtk_widget_add_css_class(GTK_WIDGET(self->event_type_tag), "event-type-tag");
-            gtk_widget_remove_css_class(GTK_WIDGET(self->event_type_tag), "holiday-tag");
-            gtk_widget_add_css_class(GTK_WIDGET(self->event_type_tag), "event-tag");
+            gtk_widget_add_css_class(GTK_WIDGET(self->event_type_tag), "pill-blue");
+            gtk_widget_remove_css_class(GTK_WIDGET(self->event_type_tag), "pill-green");
             break;
 
         case DE_HOLIDAY:
             gtk_label_set_text(GTK_LABEL(self->event_type_tag), "Holiday");
-            gtk_widget_add_css_class(GTK_WIDGET(self->event_type_tag), "event-type-tag");
-            gtk_widget_remove_css_class(GTK_WIDGET(self->event_type_tag), "event-tag");
-            gtk_widget_add_css_class(GTK_WIDGET(self->event_type_tag), "holiday-tag");
+            gtk_widget_remove_css_class(GTK_WIDGET(self->event_type_tag), "pill-blue");
+            gtk_widget_add_css_class(GTK_WIDGET(self->event_type_tag), "pill-green");
             break;
 
         default:
             break;
     }
 
-    if (!self->event_name)
-        return;
-
     gtk_label_set_text(GTK_LABEL(self->event_name), self->events.event_name);
+    gtk_widget_set_visible(GTK_WIDGET(self->event_information), TRUE);
 }
 
 static GtkWidget* create_vacation_list_item(vacation *vacation_information, time_t current_date) {
@@ -70,13 +71,27 @@ static GtkWidget* create_vacation_list_item(vacation *vacation_information, time
     int estimated_elapsed_days
         = (int) round((double) (days_to_current * vacation_information->number_of_days) / total_days);
 
+    if (estimated_elapsed_days == 0) {
+        estimated_elapsed_days = 1;
+    } else if (estimated_elapsed_days > vacation_information->number_of_days) {
+        estimated_elapsed_days = vacation_information->number_of_days;
+    }
+
     GtkWidget *content_box;
     GtkWidget *name_label;
     GtkWidget *info_label;
 
     content_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 12);
+
     name_label = gtk_label_new(g_strdup(vacation_information->employee_name));
+    gtk_widget_set_hexpand(GTK_WIDGET(name_label), TRUE);
+    gtk_widget_set_halign(GTK_WIDGET(name_label), GTK_ALIGN_START);
+
     info_label = gtk_label_new(g_strdup_printf("%d/%d days", estimated_elapsed_days, vacation_information->number_of_days));
+    gtk_widget_set_hexpand(GTK_WIDGET(info_label), TRUE);
+    gtk_widget_set_halign(GTK_WIDGET(info_label), GTK_ALIGN_END);
+    gtk_widget_add_css_class(GTK_WIDGET(info_label), "pill");
+    gtk_widget_add_css_class(GTK_WIDGET(info_label), "pill-blue");
 
     gtk_box_append(GTK_BOX(content_box), GTK_WIDGET(name_label));
     gtk_box_append(GTK_BOX(content_box), GTK_WIDGET(info_label));
@@ -97,6 +112,8 @@ static void populate_vacations_list(ToffDayDetailView *self) {
             )
         );
     }
+
+    gtk_widget_set_visible(GTK_WIDGET(self->vacation_information), TRUE);
 }
 
 static void cleanup_events(ToffDayDetailView *self, bool clear_event_type) {
@@ -104,10 +121,12 @@ static void cleanup_events(ToffDayDetailView *self, bool clear_event_type) {
         case DE_HOLIDAY:
         case DE_EVENT:
             g_clear_pointer(&self->events.event_name, g_free);
+            gtk_widget_set_visible(GTK_WIDGET(self->event_information), FALSE);
             break;
 
         case DE_VACATION:
             g_clear_pointer(&self->events.vacations, g_array_unref);
+            gtk_widget_set_visible(GTK_WIDGET(self->vacation_information), FALSE);
             break;
 
         default:
@@ -263,9 +282,11 @@ static void toff_day_detail_view_class_init(ToffDayDetailViewClass *klass) {
         "/org/loveless/toff/toff_day_detail_view.ui"
     );
 
+    gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, event_information);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, day_label);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, event_type_tag);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, event_name);
+    gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, vacation_information);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, vacation_list);
 }
 
@@ -274,5 +295,5 @@ static void toff_day_detail_view_init(ToffDayDetailView *self) {
 }
 
 GtkWidget* toff_day_detail_view_new(GtkWindow *parent) {
-    return GTK_WIDGET(g_object_new(TOFF_TYPE_DAY_DETAIL_VIEW, "tansient-for", parent, NULL));
+    return GTK_WIDGET(g_object_new(TOFF_TYPE_DAY_DETAIL_VIEW, "transient-for", parent, NULL));
 }
