@@ -73,6 +73,9 @@ static void handle_date_selected(GObject *object, gpointer user_data) {
     if (!self->date)
         return;
 
+    if (self->event_type == DE_NONE)
+        return;
+
     GtkWidget* detail_view = toff_day_detail_view_new(GTK_WINDOW(gtk_widget_get_root(GTK_WIDGET(self))));
     g_object_set(
         G_OBJECT(detail_view),

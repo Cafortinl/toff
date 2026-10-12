@@ -63,20 +63,6 @@ static void update_event_information(ToffDayDetailView *self) {
 
 static GtkWidget* create_vacation_list_item(vacation *vacation_information, time_t current_date) {
     date_range vacation_dates = vacation_information->dates;
-    int days_to_current
-        = DIFFTIME_IN_DAYS(current_date, vacation_dates.start_date);
-    int total_days
-        = DIFFTIME_IN_DAYS(vacation_dates.end_date, vacation_dates.start_date);
-
-    int estimated_elapsed_days
-        = (int) round((double) (days_to_current * vacation_information->number_of_days) / total_days);
-
-    if (estimated_elapsed_days == 0) {
-        estimated_elapsed_days = 1;
-    } else if (estimated_elapsed_days > vacation_information->number_of_days) {
-        estimated_elapsed_days = vacation_information->number_of_days;
-    }
-
     GtkWidget *content_box;
     GtkWidget *name_label;
     GtkWidget *info_label;
@@ -87,7 +73,15 @@ static GtkWidget* create_vacation_list_item(vacation *vacation_information, time
     gtk_widget_set_hexpand(GTK_WIDGET(name_label), TRUE);
     gtk_widget_set_halign(GTK_WIDGET(name_label), GTK_ALIGN_START);
 
-    info_label = gtk_label_new(g_strdup_printf("%d/%d days", estimated_elapsed_days, vacation_information->number_of_days));
+    info_label = gtk_label_new(
+        g_strdup_printf(
+            "On vacation until: %s",
+            g_date_time_format(
+                g_date_time_new_from_unix_utc(vacation_dates.end_date),
+                "%F"
+            )
+        )
+    );
     gtk_widget_set_hexpand(GTK_WIDGET(info_label), TRUE);
     gtk_widget_set_halign(GTK_WIDGET(info_label), GTK_ALIGN_END);
     gtk_widget_add_css_class(GTK_WIDGET(info_label), "pill");

@@ -34,6 +34,8 @@
                         <property name="orientation">vertical</property>
                         <property name="spacing">5</property>
                         <property name="visible">false</property>
+
+                        <!-- Day label -->
                         <child>
                             <object class="GtkLabel" id="day_label">
                                 <property name="halign">center</property>
@@ -44,9 +46,12 @@
                             </object>
                         </child>
 
+                        <!-- Event name and type -->
                         <child>
                             <object class="GtkBox">
                                 <property name="orientation">horizontal</property>
+                                <property name="halign">center</property>
+                                <property name="hexpand">true</property>
                                 <property name="spacing">5</property>
                                 <child>
                                     <object class="GtkLabel" id="event_type_tag">
@@ -61,6 +66,7 @@
                                 </child>
                             </object>
                         </child>
+
                     </object>
                 </child>
 
