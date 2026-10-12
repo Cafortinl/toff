@@ -61,8 +61,8 @@ static void populate_calendar_grid(ToffCalendarView *self) {
     strftime(end_date_str, 11, "%F", localtime(&(dates.end_date)));
 
     //Querying calendar information in date range
-    result_information *holidays = get_holidays_in_date_range(dba, dates);
-    result_information *events = get_events_in_date_range(dba, dates);
+    result_information *holidays = get_event_type_in_date_range(dba, dates, DE_HOLIDAY);
+    result_information *events = get_event_type_in_date_range(dba, dates, DE_EVENT);
 
     struct tm date_iterator_builder = *(localtime(&dates.start_date));
     time_t date_iterator = mktime(&date_iterator_builder);
@@ -94,8 +94,8 @@ static void populate_calendar_grid(ToffCalendarView *self) {
                     G_OBJECT(current_day),
                     "event_type",
                     DE_EVENT,
-                    "event_name",
-                    current_event.name,
+                    "event",
+                    current_event,
                     NULL
                 );
                 goto can_have_vacations_check;
@@ -103,15 +103,15 @@ static void populate_calendar_grid(ToffCalendarView *self) {
         }
 
         for (size_t i = 0; i < holidays->size; ++i) {
-            holiday current_holiday = ((holiday*) holidays->data)[i];
+            event current_holiday = ((event*) holidays->data)[i];
 
             if (IS_DATE_WITHIN_RANGE(date_iterator, current_holiday.dates)) {
                 g_object_set(
                     G_OBJECT(current_day),
                     "event_type",
                     DE_HOLIDAY,
-                    "event_name",
-                    current_holiday.name,
+                    "event",
+                    current_holiday,
                     NULL
                 );
                 goto can_have_vacations_check;
@@ -172,7 +172,7 @@ end:
         ++day_index;
     }
 
-    result_information_free(holidays, &holiday_result_extra_processing);
+    result_information_free(holidays, &event_result_extra_processing);
     result_information_free(events, &event_result_extra_processing);
 
     bool successful_disconnection = sqlite_dba_disconnect_from_db(dba);

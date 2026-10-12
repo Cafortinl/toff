@@ -52,6 +52,19 @@
                             </object>
                         </child>
 
+                        <!-- Vacations View -->
+                        <child>
+                            <object class="GtkStackPage">
+                                <property name="name">vacations_view</property>
+                                <property name="title">Vacations</property>
+                                <property name="child">
+                                    <object class="GtkLabel">
+                                        <property name="label">This is the vacations view...</property>
+                                    </object>
+                                </property>
+                            </object>
+                        </child>
+
                         <!-- Documents View -->
                         <child>
                             <object class="GtkStackPage">

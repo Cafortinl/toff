@@ -21,7 +21,7 @@ struct _ToffCalendarDayCell {
     gboolean is_weekend;
     enum day_event_types event_type;
     union {
-        char *event_name;
+        event *calendar_event;
         GArray *vacations;
     } events;
     GDateTime *date;
@@ -46,7 +46,7 @@ typedef enum {
     PROP_IN_MONTH,
     PROP_IS_WEEKEND,
     PROP_EVENT_TYPE,
-    PROP_EVENT_NAME,
+    PROP_CALENDAR_EVENT,
     PROP_VACATIONS,
     PROP_DATE,
     N_PROPERTIES
@@ -90,9 +90,9 @@ static void handle_date_selected(GObject *object, gpointer user_data) {
     switch ((enum day_event_types) self->event_type) {
         case DE_EVENT:
         case DE_HOLIDAY:
-            g_value_init(&prop_to_set, G_TYPE_STRING);
-            g_value_set_string(&prop_to_set, self->events.event_name);
-            g_object_set_property(G_OBJECT(detail_view), "event_name", &prop_to_set);
+            g_value_init(&prop_to_set, G_TYPE_POINTER);
+            g_value_set_pointer(&prop_to_set, self->events.calendar_event);
+            g_object_set_property(G_OBJECT(detail_view), "event", &prop_to_set);
             break;
 
         case DE_VACATION:
@@ -113,7 +113,10 @@ static void cleanup_events(ToffCalendarDayCell *self, bool clear_event_type) {
     switch ((enum day_event_types) self->event_type) {
         case DE_HOLIDAY:
         case DE_EVENT:
-            g_clear_pointer(&self->events.event_name, g_free);
+            if (self->events.calendar_event) {
+                g_clear_pointer(&self->events.calendar_event->name, g_free);
+                g_clear_pointer(&self->events.calendar_event, g_free);
+            }
             break;
 
         case DE_VACATION:
@@ -139,7 +142,7 @@ static void update_events_box(ToffCalendarDayCell *self) {
     switch (self->event_type) {
         case DE_HOLIDAY:
         case DE_EVENT:
-            label = gtk_label_new(self->events.event_name);
+            label = gtk_label_new(self->events.calendar_event->name);
             gtk_label_set_wrap(GTK_LABEL(label), TRUE);
 
             gtk_box_append(GTK_BOX(self->event_box), label);
@@ -208,9 +211,12 @@ static void toff_calendar_day_cell_set_property (
             self->event_type = (enum day_event_types) g_value_get_int(value);
             break;
 
-        case PROP_EVENT_NAME:
+        case PROP_CALENDAR_EVENT:
             cleanup_events(self, false);
-            self->events.event_name = g_value_dup_string(value);
+            event *to_set = g_value_get_pointer(value);
+            self->events.calendar_event = g_new0(event, 1);
+            *(self->events.calendar_event) = *to_set;
+            self->events.calendar_event->name = g_strdup(to_set->name);
             update_events_box(self);
             break;
 
@@ -258,8 +264,8 @@ static void toff_calendar_day_cell_get_property(
             g_value_set_int(value, self->event_type);
             break;
 
-        case PROP_EVENT_NAME:
-            g_value_set_string(value, self->events.event_name);
+        case PROP_CALENDAR_EVENT:
+            g_value_set_pointer(value, self->events.calendar_event);
             break;
 
         case PROP_VACATIONS:
@@ -360,12 +366,11 @@ static void toff_calendar_day_cell_class_init(ToffCalendarDayCellClass *klass) {
             G_PARAM_READWRITE
         );
 
-    obj_properties[PROP_EVENT_NAME] =
-        g_param_spec_string(
-            "event_name",
-            "Event name",
+    obj_properties[PROP_CALENDAR_EVENT] =
+        g_param_spec_pointer(
+            "event",
+            "Event",
             "Name of the event in the day cell's day (when it applies).",
-            NULL,
             G_PARAM_READWRITE
         );
 

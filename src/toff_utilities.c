@@ -1,4 +1,5 @@
 #include "toff_utilities.h"
+#include <stdio.h>
 
 void result_information_free(
     result_information *results,
@@ -14,20 +15,11 @@ void result_information_free(
     results = NULL;
 }
 
-// void day_event_information_free(day_event_information *day_information) {
-//     if (day_information->events.is_event || day_information.events.is_holiday)
-//         free(day_information.events.event_name);
-//
-//     for (size_t i = 0; i < day_information->events.vacations.count; ++i) {
-//         free(day_information->events.vacations.data[i].employee_name);
-//     }
-//     free(day_information->events.vacations.data);
-// }
-
 query_result* fetch_data_in_date_range(
     sqlite_database_administrator *dba,
     const table_definition table_information,
-    date_range range
+    date_range range,
+    const query_filter_node *extra_filters
 ) {
     if (!dba) {
         fprintf(stderr, "fetch_data_in_date_range - Error: no valid sqlite_database_administrator struct was provided.\n");
@@ -65,127 +57,73 @@ query_result* fetch_data_in_date_range(
         .operation = QF_AND
     };
 
+    query_filter_node *query_filters;
+    if (extra_filters) {
+        query_filters = &(query_filter_node) {
+            .left.node = (query_filter_node*) extra_filters,
+            .right.node = date_filters,
+            .node_types = SET_NODETYPES(QF_NODE, QF_NODE),
+            .operation = QF_AND
+        };
+    } else {
+        query_filters = date_filters;
+    }
+
     query_result *query_results = sqlite_dba_fetch_items(
         dba,
         table_information.table_name,
         table_information.columns,
         table_information.column_count,
-        date_filters
+        query_filters
     );
 
     return query_results;
 }
 
-result_information* get_holidays_in_date_range(
+result_information* get_event_type_in_date_range(
     sqlite_database_administrator *dba, 
-    date_range range
+    date_range range,
+    enum day_event_types event_type
 ) {
     result_information* results = malloc(sizeof(result_information) * 1);
     results->size = 0;
     results->data = NULL;
 
     if (!dba) {
-        fprintf(stderr, "get_holidays_in_date_range - Error: no valid sqlite_database_administrator struct was provided.\n");
+        fprintf(stderr, "get_event_type_in_date_range - Error: no valid sqlite_database_administrator struct was provided.\n");
         goto end;
     }
 
     if (!dba->database) {
-        fprintf(stderr, "get_holidays_in_date_range - Error: no valid database connection.\n");
+        fprintf(stderr, "get_event_type_in_date_range - Error: no valid database connection.\n");
         goto end;
     }
 
     if (!IS_DATE_RANGE_VALID(range)) {
-        fprintf(stderr, "get_holidays_in_date_range - Error: end_date can not be before start_date.\n");
+        fprintf(stderr, "get_event_type_in_date_range - Error: end_date can not be before start_date.\n");
         goto end;
     }
 
-    query_result *query_results = fetch_data_in_date_range(
-        dba,
-        holiday_table,
-        range
-    );
-
-    if (!query_results) {
+    if (event_type != DE_EVENT && event_type != DE_HOLIDAY) {
+        fprintf(stderr, "get_event_type_in_date_range - Error: event_type has an invalid value.\n");
         goto end;
     }
 
-    holiday *holidays = malloc(sizeof(holiday) * (query_results->length / query_results->column_count));
-    for (size_t i = 0; i < query_results->length; i += query_results->column_count) {
-        /*
-         *  Given that `results` was queried using `holiday_table_columns` in
-         *  the `fields` param we know for a fact that:
-         *  - results->columns[i + 0] = id,
-         *  - results->columns[i + 1] = name,
-         *  - results->columns[i + 2] = start_date,
-         *  - results->columns[i + 3] = end_date,
-         */
-        int year, month, day;
+    char event_type_str[2];
+    snprintf(event_type_str, 2, "%d", (int) event_type); 
 
-        sscanf(query_results->columns[i + 2].value.as.text_value, "%d-%d-%d", &year, &month, &day);
-        struct tm start_date_builder = {
-            .tm_year = year - 1900,
-            .tm_mon = month - 1,
-            .tm_mday = day
-        };
-
-        sscanf(query_results->columns[i + 3].value.as.text_value, "%d-%d-%d", &year, &month, &day);
-        struct tm end_date_builder = {
-            .tm_year = year - 1900,
-            .tm_mon = month - 1,
-            .tm_mday = day
-        };
-
-        holidays[i / query_results->column_count] = (holiday) {
-            .id = query_results->columns[i].value.as.integer_value,
-            .name = strdup(query_results->columns[i + 1].value.as.text_value),
-            .dates = {
-                .start_date = mktime(&start_date_builder),
-                .end_date = mktime(&end_date_builder)
-            }
-        };
-    }
-    results->size = query_results->length / query_results->column_count;
-    results->data = holidays;
-
-    sqlite_dba_query_result_free(query_results);
-
-end:
-    return results;
-}
-
-void holiday_result_extra_processing(result_information *holidays) {
-    for (size_t i = 0; i < holidays->size; ++i) {
-        free(((holiday*) holidays->data)[i].name);
-    }
-}
-
-result_information* get_events_in_date_range(
-    sqlite_database_administrator *dba, 
-    date_range range
-) {
-    result_information* results = malloc(sizeof(result_information) * 1);
-    results->size = 0;
-    results->data = NULL;
-
-    if (!dba) {
-        fprintf(stderr, "get_events_in_date_range - Error: no valid sqlite_database_administrator struct was provided.\n");
-        goto end;
-    }
-
-    if (!dba->database) {
-        fprintf(stderr, "get_events_in_date_range - Error: no valid database connection.\n");
-        goto end;
-    }
-
-    if (!IS_DATE_RANGE_VALID(range)) {
-        fprintf(stderr, "get_events_in_date_range - Error: end_date can not be before start_date.\n");
-        goto end;
-    }
+    query_filter_node event_type_filter = {
+        .left.text = "event_type",
+        .right.text = event_type_str,
+        .node_types = SET_NODETYPES(QF_TEXT, QF_TEXT),
+        .operation = QF_EQUALS
+    };
 
     query_result *query_results = fetch_data_in_date_range(
         dba,
         calendar_event_table,
-        range
+        range,
+        &event_type_filter
     );
 
     if (!query_results) {
@@ -195,23 +133,24 @@ result_information* get_events_in_date_range(
     event *events = malloc(sizeof(event) * (query_results->length / query_results->column_count));
     for (size_t i = 0; i < query_results->length; i += query_results->column_count) {
         /*
-         *  Given that `results` was queried using `event_table_columns` in
+         *  Given that `results` was queried using `calendar_event_table_columns` in
          *  the `fields` param we know for a fact that:
          *  - results->columns[i + 0] = id,
          *  - results->columns[i + 1] = name,
-         *  - results->columns[i + 2] = start_date,
-         *  - results->columns[i + 3] = end_date,
+         *  - results->columns[i + 2] = event_type,
+         *  - results->columns[i + 3] = start_date,
+         *  - results->columns[i + 4] = end_date,
          */
         int year, month, day;
 
-        sscanf(query_results->columns[i + 2].value.as.text_value, "%d-%d-%d", &year, &month, &day);
+        sscanf(query_results->columns[i + 3].value.as.text_value, "%d-%d-%d", &year, &month, &day);
         struct tm start_date_builder = {
             .tm_year = year - 1900,
             .tm_mon = month - 1,
             .tm_mday = day
         };
 
-        sscanf(query_results->columns[i + 3].value.as.text_value, "%d-%d-%d", &year, &month, &day);
+        sscanf(query_results->columns[i + 4].value.as.text_value, "%d-%d-%d", &year, &month, &day);
         struct tm end_date_builder = {
             .tm_year = year - 1900,
             .tm_mon = month - 1,
@@ -221,6 +160,7 @@ result_information* get_events_in_date_range(
         events[i / query_results->column_count] = (event) {
             .id = query_results->columns[i].value.as.integer_value,
             .name = strdup(query_results->columns[i + 1].value.as.text_value),
+            .event_type = query_results->columns[i + 2].value.as.integer_value,
             .dates = {
                 .start_date = mktime(&start_date_builder),
                 .end_date = mktime(&end_date_builder)
@@ -385,7 +325,8 @@ result_information* get_vacations_in_date_range(
     query_result *query_results = fetch_data_in_date_range(
         dba,
         vacations_employees,
-        range
+        range,
+        NULL
     );
 
     if (!query_results) {

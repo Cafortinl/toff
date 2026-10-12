@@ -28,23 +28,22 @@
                 <property name="margin-start">24</property>
                 <property name="margin-end">24</property>
 
+                <child>
+                    <object class="GtkLabel" id="day_label">
+                        <property name="halign">center</property>
+                        <property name="wrap">true</property>
+                        <style>
+                            <class name="day-title"/>
+                        </style>
+                    </object>
+                </child>
+
                 <!-- Event Information -->
                 <child>
                     <object class="GtkBox" id="event_information">
                         <property name="orientation">vertical</property>
-                        <property name="spacing">5</property>
+                        <property name="spacing">10</property>
                         <property name="visible">false</property>
-
-                        <!-- Day label -->
-                        <child>
-                            <object class="GtkLabel" id="day_label">
-                                <property name="halign">center</property>
-                                <property name="wrap">true</property>
-                                <style>
-                                    <class name="day-title"/>
-                                </style>
-                            </object>
-                        </child>
 
                         <!-- Event name and type -->
                         <child>
@@ -53,6 +52,7 @@
                                 <property name="halign">center</property>
                                 <property name="hexpand">true</property>
                                 <property name="spacing">5</property>
+
                                 <child>
                                     <object class="GtkLabel" id="event_type_tag">
                                         <style>
@@ -60,9 +60,55 @@
                                         </style>
                                     </object>
                                 </child>
+
                                 <child>
                                     <object class="GtkLabel" id="event_name">
+                                        <style>
+                                            <class name="section-heading"/>
+                                        </style>
                                     </object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">5</property>
+                                <property name="halign">center</property>
+
+                                <child>
+                                    <object class="GtkLabel">
+                                        <property name="label" translatable="yes">Start Date:</property>
+                                        <style>
+                                            <class name="section-heading"/>
+                                        </style>
+                                    </object>
+                                </child>
+
+                                <child>
+                                    <object class="GtkLabel" id="start_date_label"></object>
+                                </child>
+                            </object>
+                        </child>
+
+                        <child>
+                            <object class="GtkBox">
+                                <property name="orientation">horizontal</property>
+                                <property name="spacing">5</property>
+                                <property name="halign">center</property>
+
+                                <child>
+                                    <object class="GtkLabel">
+                                        <property name="label" translatable="yes">End Date:</property>
+                                        <style>
+                                            <class name="section-heading"/>
+                                        </style>
+                                    </object>
+                                </child>
+
+                                <child>
+                                    <object class="GtkLabel" id="end_date_label"></object>
                                 </child>
                             </object>
                         </child>

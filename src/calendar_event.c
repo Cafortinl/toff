@@ -18,6 +18,12 @@ table_field_node calendar_event_table_columns[CALENDAR_EVENT_TABLE_COLUMN_COUNT]
         }
     },
     {
+        .column_name = "event_type",
+        .value = (column_information) {
+            .type = SQLITE_DBA_INTEGER
+        }
+    },
+    {
         .column_name = "start_date",
         .value = (column_information) {
             .type = SQLITE_DBA_TEXT
@@ -32,7 +38,7 @@ table_field_node calendar_event_table_columns[CALENDAR_EVENT_TABLE_COLUMN_COUNT]
 };
 
 table_definition calendar_event_table = {
-    .table_name = "events",
+    .table_name = "calendar_events",
     .columns = (table_field_node*) (&calendar_event_table_columns),
     .column_count = CALENDAR_EVENT_TABLE_COLUMN_COUNT
 };

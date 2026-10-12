@@ -3,22 +3,26 @@
 #include "date_utilities.h"
 #include "glib-object.h"
 #include "gtk/gtk.h"
-#include "toff_utilities.h"
-#include <math.h>
+#include "calendar_event.h"
+#include "vacation.h"
 
 struct _ToffDayDetailView {
     GtkWidget parent;
 
-    GtkWidget *event_information;
     GtkWidget *day_label;
+
+    GtkWidget *event_information;
     GtkWidget *event_type_tag;
     GtkWidget *event_name;
+    GtkWidget *start_date_label;
+    GtkWidget *end_date_label;
+
     GtkWidget *vacation_information;
     GtkWidget *vacation_list;
 
     enum day_event_types event_type;
     union {
-        char *event_name;
+        event *calendar_event;
         GArray *vacations;
     } events;
     GDateTime *date;
@@ -28,7 +32,7 @@ G_DEFINE_TYPE(ToffDayDetailView, toff_day_detail_view, GTK_TYPE_WINDOW)
 
 typedef enum {
     PROP_EVENT_TYPE = 1,
-    PROP_EVENT_NAME,
+    PROP_CALENDAR_EVENT,
     PROP_VACATIONS,
     PROP_DATE,
     N_PROPERTIES
@@ -37,7 +41,7 @@ typedef enum {
 static GParamSpec *obj_properties[N_PROPERTIES] = { NULL, };
 
 static void update_event_information(ToffDayDetailView *self) {
-    if (!self->event_name)
+    if (!self->events.calendar_event)
         return;
 
     switch ((enum day_event_types) self->event_type) {
@@ -57,11 +61,27 @@ static void update_event_information(ToffDayDetailView *self) {
             break;
     }
 
-    gtk_label_set_text(GTK_LABEL(self->event_name), self->events.event_name);
+    gtk_label_set_text(
+        GTK_LABEL(self->start_date_label),
+        g_date_time_format(
+            g_date_time_new_from_unix_utc(self->events.calendar_event->dates.start_date),
+            "%F"
+        )
+    );
+
+    gtk_label_set_text(
+        GTK_LABEL(self->end_date_label),
+        g_date_time_format(
+            g_date_time_new_from_unix_utc(self->events.calendar_event->dates.end_date),
+            "%F"
+        )
+    );
+
+    gtk_label_set_text(GTK_LABEL(self->event_name), self->events.calendar_event->name);
     gtk_widget_set_visible(GTK_WIDGET(self->event_information), TRUE);
 }
 
-static GtkWidget* create_vacation_list_item(vacation *vacation_information, time_t current_date) {
+static GtkWidget* create_vacation_list_item(vacation *vacation_information) {
     date_range vacation_dates = vacation_information->dates;
     GtkWidget *content_box;
     GtkWidget *name_label;
@@ -101,8 +121,7 @@ static void populate_vacations_list(ToffDayDetailView *self) {
         gtk_list_box_append(
             GTK_LIST_BOX(self->vacation_list),
             create_vacation_list_item(
-                &g_array_index(self->events.vacations, vacation, i),
-                (time_t) g_date_time_to_unix(self->date)
+                &g_array_index(self->events.vacations, vacation, i)
             )
         );
     }
@@ -110,22 +129,33 @@ static void populate_vacations_list(ToffDayDetailView *self) {
     gtk_widget_set_visible(GTK_WIDGET(self->vacation_information), TRUE);
 }
 
-static void cleanup_events(ToffDayDetailView *self, bool clear_event_type) {
+static void free_events(ToffDayDetailView *self) {
     switch (self->event_type) {
         case DE_HOLIDAY:
         case DE_EVENT:
-            g_clear_pointer(&self->events.event_name, g_free);
-            gtk_widget_set_visible(GTK_WIDGET(self->event_information), FALSE);
+            if (self->events.calendar_event) {
+                g_clear_pointer(&self->events.calendar_event->name, g_free);
+                g_clear_pointer(&self->events.calendar_event, g_free);
+            }
             break;
 
         case DE_VACATION:
             g_clear_pointer(&self->events.vacations, g_array_unref);
-            gtk_widget_set_visible(GTK_WIDGET(self->vacation_information), FALSE);
             break;
 
         default:
             break;
     }
+}
+
+static void cleanup_events(ToffDayDetailView *self, bool clear_event_type) {
+    free_events(self);
+
+    if (self->event_information)
+        gtk_widget_set_visible(GTK_WIDGET(self->event_information), FALSE);
+
+    if (self->vacation_information)
+        gtk_widget_set_visible(GTK_WIDGET(self->vacation_information), FALSE);
 
     if (clear_event_type)
         self->event_type = DE_NONE;
@@ -146,9 +176,12 @@ static void toff_day_detail_view_set_property (
             update_event_information(self);
             break;
 
-        case PROP_EVENT_NAME:
+        case PROP_CALENDAR_EVENT:
             cleanup_events(self, false);
-            self->events.event_name = g_value_dup_string(value);
+            event *to_set = g_value_get_pointer(value);
+            self->events.calendar_event = g_new0(event, 1);
+            *(self->events.calendar_event) = *to_set;
+            self->events.calendar_event->name = g_strdup(to_set->name);
             update_event_information(self);
             break;
 
@@ -184,8 +217,8 @@ static void toff_day_detail_view_get_property (
             g_value_set_int(value, self->event_type);
             break;
 
-        case PROP_EVENT_NAME:
-            g_value_set_string(value, self->events.event_name);
+        case PROP_CALENDAR_EVENT:
+            g_value_set_pointer(value, self->events.calendar_event);
             break;
 
         case PROP_VACATIONS:
@@ -213,7 +246,7 @@ static void toff_day_detail_view_dispose(GObject *object) {
 static void toff_day_detail_view_finalize(GObject *object) {
     ToffDayDetailView *self = TOFF_DAY_DETAIL_VIEW(object);
 
-    cleanup_events(self, true);
+    free_events(self);
     g_clear_pointer(&self->date, g_date_time_unref);
 
     G_OBJECT_CLASS(toff_day_detail_view_parent_class)->finalize(object);
@@ -240,12 +273,11 @@ static void toff_day_detail_view_class_init(ToffDayDetailViewClass *klass) {
             G_PARAM_READWRITE
         );
 
-    obj_properties[PROP_EVENT_NAME] =
-        g_param_spec_string(
-            "event_name",
-            "Event name",
+    obj_properties[PROP_CALENDAR_EVENT] =
+        g_param_spec_pointer(
+            "event",
+            "Event",
             "Name of the event in the day cell's day (when it applies).",
-            NULL,
             G_PARAM_READWRITE
         );
 
@@ -276,10 +308,12 @@ static void toff_day_detail_view_class_init(ToffDayDetailViewClass *klass) {
         "/org/loveless/toff/toff_day_detail_view.ui"
     );
 
-    gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, event_information);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, day_label);
+    gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, event_information);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, event_type_tag);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, event_name);
+    gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, start_date_label);
+    gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, end_date_label);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, vacation_information);
     gtk_widget_class_bind_template_child(widget_class, ToffDayDetailView, vacation_list);
 }
